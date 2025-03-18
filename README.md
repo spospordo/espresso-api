@@ -1,1 +1,6 @@
-# espresso
+# espresso-api
+Used to track espresso recipe for 3 different beans.  
+
+The resulting website in my espresso repository is formated for the TRMNL eink display of 800x480.
+
+Post commands can be used to submit changes to the website. The server then saves the changes and generates a screenshot of the website, and an output.html file with all the values hardcoded into the html file. This makes it portable so the server can be hosted locally, and the output.html can be ftp-ed to an external location. 
