@@ -7,7 +7,7 @@ const config = require('./config'); // Import configuration from config.js
 // Function to upload file to the Git repo
 async function uploadFile() {
     // Access the grouped git upload configurations
-    const { sourceFilePath, targetFolderInRepo, gitRepoDir, gitBranch, commitMessage, gitRemote } = config.gitUploadConfig;
+    const { sourceFilePath, targetFolderInRepo, gitRepoDir, gitBranch, commitMessage, gitRemote, gitUsername, gitPassword } = config.gitUploadConfig;
 
     // Ensure the file exists before proceeding
     if (!fs.existsSync(sourceFilePath)) {
@@ -45,8 +45,15 @@ async function uploadFile() {
         await git.commit(commitMessage);
         console.log('File committed');
 
+        // Modify remote URL with authentication credentials (username and personal access token)
+        const remoteUrl = `https://${gitUsername}:${gitPassword}@github.com/${gitRemote}/${gitRepoDir}.git`;
+        
+        // Add the remote URL with the credentials
+        await git.addRemote('origin', remoteUrl);
+        console.log('Git remote set with authentication credentials');
+
         // Push to the remote repository
-        await git.push(gitRemote, gitBranch);  // Push to the remote repo and specified branch
+        await git.push('origin', gitBranch);  // Push to the remote repo and specified branch
         console.log('File pushed to remote repository');
     } catch (err) {
         console.error(`Error during file upload: ${err}`);
