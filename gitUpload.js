@@ -1,56 +1,57 @@
-// gitUpload.js
-const simpleGit = require('simple-git');
 const fs = require('fs');
 const path = require('path');
-const { gitConfig } = require('./config'); // Import the configuration
-const fsExtra = require('fs-extra'); // To copy files
-
-// Initialize simple-git with the path to your local git repo
+const simpleGit = require('simple-git');
 const git = simpleGit();
+const config = require('./config'); // Import configuration from config.js
 
-// Function to upload the file to the Git repo
+// Function to upload file to the Git repo
 async function uploadFile() {
-  const { username, password, repoURL, folderPath, commitMessage, fileToUpload, targetFolder, branchName } = gitConfig;
+    // Access the grouped git upload configurations
+    const { sourceFilePath, targetFolderInRepo, gitRepoDir, gitBranch, commitMessage, gitRemote } = config.gitUploadConfig;
 
-  try {
-    // Change to the folder where the git repository is located (if it's not already initialized)
-    const repoPath = path.join(__dirname, folderPath);
-    process.chdir(repoPath);
-
-    // Clone the repo if it doesn't exist locally (you can skip this if it's already cloned)
-    if (!fs.existsSync('.git')) {
-      console.log('Cloning the repository...');
-      await git.clone(repoURL);
-      console.log('Repository cloned successfully.');
+    // Ensure the file exists before proceeding
+    if (!fs.existsSync(sourceFilePath)) {
+        console.error(`The file does not exist: ${sourceFilePath}`);
+        return;
     }
 
-    // Checkout to the specific branch if it's not already checked out
-    await git.checkout(branchName);
+    try {
+        // Change to the git repository directory
+        process.chdir(gitRepoDir);
+        console.log(`Changed directory to: ${gitRepoDir}`);
 
-    // Define the target file path where you want to copy the file in the repo
-    const targetPath = path.join(repoPath, targetFolder, path.basename(fileToUpload));
-    
-    // Copy the file to the target folder in the repository
-    console.log(`Copying file to ${targetPath}...`);
-    await fsExtra.copy(fileToUpload, targetPath);
+        // Get the file name from the source file path
+        const fileName = path.basename(sourceFilePath); 
+        
+        // Define the destination path in the Git repo
+        const destFilePath = path.join(gitRepoDir, targetFolderInRepo, fileName); // Combine target folder and file name
 
-    // Add the copied file to the git staging area
-    console.log('Adding file to git...');
-    await git.add(path.join(targetFolder, path.basename(fileToUpload)));
+        // Ensure the target folder exists in the repo, create if necessary
+        const targetFolder = path.dirname(destFilePath);
+        if (!fs.existsSync(targetFolder)) {
+            fs.mkdirSync(targetFolder, { recursive: true });
+            console.log(`Created target folder: ${targetFolder}`);
+        }
 
-    // Commit the changes
-    console.log('Committing the changes...');
-    await git.commit(commitMessage);
+        // Copy the file to the repository folder
+        fs.copyFileSync(sourceFilePath, destFilePath);
+        console.log(`File copied to: ${destFilePath}`);
 
-    // Push the changes to the remote repository
-    console.log('Pushing the changes...');
-    await git.push('origin', branchName);
+        // Stage the file in Git
+        await git.add(destFilePath);
+        console.log(`File staged: ${destFilePath}`);
 
-    console.log('File uploaded successfully to Git repository!');
-  } catch (error) {
-    console.error('Error during file upload:', error);
-  }
+        // Commit the file
+        await git.commit(commitMessage);
+        console.log('File committed');
+
+        // Push to the remote repository
+        await git.push(gitRemote, gitBranch);  // Push to the remote repo and specified branch
+        console.log('File pushed to remote repository');
+    } catch (err) {
+        console.error(`Error during file upload: ${err}`);
+    }
 }
 
-// Run the function to upload the file
+// Run the upload function
 uploadFile();
