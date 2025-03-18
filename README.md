@@ -7,9 +7,21 @@ Post commands can be used to submit changes to the website. The server then save
 
 ![output](https://github.com/user-attachments/assets/0f77c6c1-49cd-4951-bc62-79d600c32fa7)
 
-Installation
+## Installation
+
 Clone repository
 npm install
 
-update
+## update
+
 git pull && npm install
+
+##Server commands
+
+### restart
+
+sudo systemctl restart espresso-api.service
+
+### server log
+
+ sudo journalctl -u espresso-api.service -f
