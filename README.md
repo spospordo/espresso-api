@@ -25,3 +25,6 @@ sudo systemctl restart espresso-api.service
 ### server log
 
  sudo journalctl -u espresso-api.service -f
+
+## Dependancies
+npm install simple-git
