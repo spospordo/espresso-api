@@ -54,7 +54,10 @@ const path = require('path');
             // Check if the image key exists in the imagePaths object
             if (imagePaths[imageKey]) {
                 imgElement.src = imagePaths[imageKey]; // Set the src to the absolute image path from config.js
-            }
+            } else {
+                console.warn(`Image key not found in imagePaths: ${imageKey}`);
+            // Optionally set a default image or leave it as is
+}
         });
 
         // Save the updated HTML to the output path
