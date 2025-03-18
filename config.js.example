@@ -22,4 +22,14 @@ module.exports = {
     staticFilesDirectory: 'ouput location',  // Path to serve static files
     textFilePath: '/<folder structure>/textValues.json'  // Path to the JSON file with text values
   }
+  gitConfig: {
+    username: 'your-git-username',
+    password: 'your-git-password', // You can also use a personal access token instead of password
+    repoURL: 'https://github.com/your-username/your-repository.git', // Git repository URL
+    folderPath: 'path/to/your/local/folder', // Path to the folder containing the file you want to upload
+    commitMessage: 'Uploading file from local server',
+    fileToUpload: 'path/to/your/local/file', // The specific file you want to upload
+    branchName: 'main', // The branch to upload the file to
+};
+
 };
