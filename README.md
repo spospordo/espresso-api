@@ -28,3 +28,6 @@ sudo systemctl restart espresso-api.service
 
 ## Dependancies
 npm install simple-git
+
+npm install fs-extra
+
