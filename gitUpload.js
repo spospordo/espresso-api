@@ -45,12 +45,18 @@ async function uploadFile() {
         await git.commit(commitMessage);
         console.log('File committed');
 
-        // Modify remote URL with authentication credentials (username and personal access token)
+        // Check if the remote origin already exists
+        const remotes = await git.getRemotes();
         const remoteUrl = `https://${gitUsername}:${gitPassword}@github.com/${gitRemote}/${gitRepoDir}.git`;
         
-        // Add the remote URL with the credentials
-        await git.addRemote('origin', remoteUrl);
-        console.log('Git remote set with authentication credentials');
+        // If 'origin' remote exists, update it. Otherwise, add it.
+        if (remotes.some(remote => remote.name === 'origin')) {
+            await git.remote(['set-url', 'origin', remoteUrl]);  // Update the remote URL
+            console.log('Updated the remote URL for origin');
+        } else {
+            await git.addRemote('origin', remoteUrl);  // Add the remote if it doesn't exist
+            console.log('Git remote set with authentication credentials');
+        }
 
         // Push to the remote repository
         await git.push('origin', gitBranch);  // Push to the remote repo and specified branch
