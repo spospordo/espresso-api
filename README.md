@@ -31,3 +31,6 @@ npm install simple-git
 
 npm install fs-extra
 
+npm install ssh2
+
+
