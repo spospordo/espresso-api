@@ -68,10 +68,11 @@ app.post('/update-texts', express.json(), (req, res) => {
     saveTextValues();  // Save the updated values to the JSON file
     res.status(200).send('Text values updated successfully');
 
-    // After the update, run the generateHTML.js script
+    // Run generateHTML.js first
     setTimeout(() => {
         if (!htmlConfig.originalHTMLPath) {
             console.log("Skipping generateHTML.js as originalHTMLPath is blank or null.");
+            runConvertToJpeg(); // Move to the next step even if generateHTML.js is skipped
             return;
         }
         console.log('Running the generateHTML.js script...');
@@ -85,62 +86,81 @@ app.post('/update-texts', express.json(), (req, res) => {
                 console.error(`generateHTML.js stderr: ${stderr}`);
             }
 
-            // After generateHTML.js is done, wait for 3 seconds and run convertToJpeg.js
-            setTimeout(() => {
-                if (!fileConfig.localFilePath) {
-                    console.log("Skipping convertToJpeg.js as localFilePath is blank or null.");
-                    return;
-                }
-                console.log('Running the convertToJpeg.js script...');
-                exec('node convertToJpeg.js', (error, stdout, stderr) => {
-                    if (error) {
-                        console.error(`Error executing convertToJpeg.js: ${error}`);
-                        return;
-                    }
-                    console.log(`convertToJpeg.js output: ${stdout}`);
-                    if (stderr) {
-                        console.error(`convertToJpeg.js stderr: ${stderr}`);
-                    }
-
-                    // After convertToJpeg.js is done, wait for 3 seconds and run ftpFile.js and uploadToGitHub.mjs
-                    setTimeout(() => {
-                        if (!ftpConfig.host) {
-                            console.log("Skipping ftpFile.js as FTP settings are missing.");
-                            return;
-                        }
-                        console.log('Running the ftpFile.js script...');
-                        exec('node ftpFile.js', (error, stdout, stderr) => {
-                            if (error) {
-                                console.error(`Error executing ftpFile.js: ${error}`);
-                                return;
-                            }
-                            console.log(`ftpFile.js output: ${stdout}`);
-                            if (stderr) {
-                                console.error(`ftpFile.js stderr: ${stderr}`);
-                            }
-                        });
-
-                        // Run uploadToGitHub.mjs after ftpFile.js
-                        if (!github.username) {
-                            console.log("Skipping uploadToGitHub.mjs as GitHub settings are missing.");
-                            return;
-                        }
-                        console.log('Running the uploadToGitHub.mjs script...');
-                        exec('node --experimental-modules uploadToGitHub.mjs', (error, stdout, stderr) => {
-                            if (error) {
-                                console.error(`Error executing uploadToGitHub.mjs: ${error}`);
-                                return;
-                            }
-                            console.log(`uploadToGitHub.mjs output: ${stdout}`);
-                            if (stderr) {
-                                console.error(`uploadToGitHub.mjs stderr: ${stderr}`);
-                            }
-                        });
-                    }, 3000); // 3-second delay after convertToJpeg.js
-                });
-            }, 3000); // 3-second delay after generateHTML.js
+            // After generateHTML.js is done, run convertToJpeg.js
+            runConvertToJpeg();
         });
     }, 3000); // 3-second delay after update-texts
+
+    // Function to run convertToJpeg.js after a 3-second delay
+    function runConvertToJpeg() {
+        setTimeout(() => {
+            if (!fileConfig.localFilePath) {
+                console.log("Skipping convertToJpeg.js as localFilePath is blank or null.");
+                runFtpFile(); // Move to the next step even if convertToJpeg.js is skipped
+                return;
+            }
+            console.log('Running the convertToJpeg.js script...');
+            exec('node convertToJpeg.js', (error, stdout, stderr) => {
+                if (error) {
+                    console.error(`Error executing convertToJpeg.js: ${error}`);
+                    return;
+                }
+                console.log(`convertToJpeg.js output: ${stdout}`);
+                if (stderr) {
+                    console.error(`convertToJpeg.js stderr: ${stderr}`);
+                }
+
+                // After convertToJpeg.js is done, run ftpFile.js and uploadToGitHub.mjs
+                runFtpFile();
+            });
+        }, 3000); // 3-second delay after generateHTML.js
+    }
+
+    // Function to run ftpFile.js and uploadToGitHub.mjs after a 3-second delay
+    function runFtpFile() {
+        setTimeout(() => {
+            if (!ftpConfig.host) {
+                console.log("Skipping ftpFile.js as FTP settings are missing.");
+                runUploadToGitHub(); // Move to the next step even if ftpFile.js is skipped
+                return;
+            }
+            console.log('Running the ftpFile.js script...');
+            exec('node ftpFile.js', (error, stdout, stderr) => {
+                if (error) {
+                    console.error(`Error executing ftpFile.js: ${error}`);
+                    return;
+                }
+                console.log(`ftpFile.js output: ${stdout}`);
+                if (stderr) {
+                    console.error(`ftpFile.js stderr: ${stderr}`);
+                }
+
+                // After ftpFile.js is done, run uploadToGitHub.mjs
+                runUploadToGitHub();
+            });
+        }, 3000); // 3-second delay after convertToJpeg.js
+    }
+
+    // Function to run uploadToGitHub.mjs after a 3-second delay
+    function runUploadToGitHub() {
+        setTimeout(() => {
+            if (!github.username) {
+                console.log("Skipping uploadToGitHub.mjs as GitHub settings are missing.");
+                return;
+            }
+            console.log('Running the uploadToGitHub.mjs script...');
+            exec('node --experimental-modules uploadToGitHub.mjs', (error, stdout, stderr) => {
+                if (error) {
+                    console.error(`Error executing uploadToGitHub.mjs: ${error}`);
+                    return;
+                }
+                console.log(`uploadToGitHub.mjs output: ${stdout}`);
+                if (stderr) {
+                    console.error(`uploadToGitHub.mjs stderr: ${stderr}`);
+                }
+            });
+        }, 3000); // 3-second delay after ftpFile.js
+    }
 });
 
 // Start the server (using the port from config.js)
