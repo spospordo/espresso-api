@@ -13,23 +13,25 @@ all the values hardcoded into the html file. This makes it portable so the serve
 ## Installation
 
 Clone repository
+```
 npm install
-
+```
 ## update
-
+```
 git pull && npm install
-
-##Server commands
+```
+## Server commands
 
 ### restart
-
+```
 sudo systemctl restart espresso-api.service
-
+```
 ### server log
-
- sudo journalctl -u espresso-api.service -f
-
+```
+sudo journalctl -u espresso-api.service -f
+```
 ## Dependancies
+```
 npm install simple-git
 
 npm install fs-extra
@@ -39,6 +41,7 @@ npm install ssh2
 npm install express
 
 npm install node-fetch
+```
 
 npm install axios
 
