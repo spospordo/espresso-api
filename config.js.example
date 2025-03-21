@@ -1,19 +1,19 @@
 // config.js
 module.exports = {
   ftpConfig: {
-    host: 'ftpupload url',
+    host: 'ftpupload url', //leave value blank to skip ftp
     user: 'UserID',
     password: 'Password',
     secure: false,
     pasv: true
   },
   fileConfig: {
-    localFilePath: 'http://localhost/espresso/output.html',  // The webpage URL to capture
+    localFilePath: 'http://localhost/espresso/output.html',  // The webpage URL to capture or leave blank to skip converting to Jpeg
     localOutputPath: 'output.jpeg',  // The local path to save the screenshot
     remoteOutputPath: '/your-folder/output.jpeg',  // The remote FTP path where the file will be uploaded
   },
   htmlConfig: {
-    originalHTMLPath: '/your-folder/index.html',  // Path to the original HTML file
+    originalHTMLPath: '/your-folder/index.html',  // Path to the original HTML file or leave blank to skip generating HTML file
     outputHTMLPath: '/your-folder/output.html',   // Path where the rendered HTML will be saved
     serverURL: 'http://<server IP>:3000/get-text',  // Server's URL to fetch the dynamic text values
         imagePaths: {
@@ -28,7 +28,7 @@ module.exports = {
     textFilePath: '/home/<username or folder>/espresso-api/textValues.json'  // Path to the JSON file with text values
   },
     github: {
-        username: 'username',  // Replace with your GitHub username
+        username: 'username',  // Replace with your GitHub username or leave value blank to skip GitHub push
         token: 'tokenText',        // Replace with your GitHub personal access token
         repo: '<username>.github.io',       // Your GitHub Pages repository name
         branch: 'main',                    // Branch for GitHub Pages, usually 'main'
