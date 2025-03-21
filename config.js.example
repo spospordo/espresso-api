@@ -1,35 +1,41 @@
 // config.js
 module.exports = {
   ftpConfig: {
-    host: 'url',
-    user: 'userID',
+    host: 'ftpupload url',
+    user: 'UserID',
     password: 'Password',
     secure: false,
     pasv: true
   },
   fileConfig: {
-    localFilePath: 'url of webpage to screenshot',  // The webpage URL to capture
-    localOutputPath: 'filename and path of local image file',  // The local path to save the screenshot
-    remoteOutputPath: 'filename and path of image file output',  // The remote FTP path where the file will be uploaded
+    localFilePath: 'http://localhost/espresso/output.html',  // The webpage URL to capture
+    localOutputPath: 'output.jpeg',  // The local path to save the screenshot
+    remoteOutputPath: '/your-folder/output.jpeg',  // The remote FTP path where the file will be uploaded
   },
   htmlConfig: {
-    originalHTMLPath: 'url',  // Path to the original HTML file
-    outputHTMLPath: '/folder and file name.jpg',   // Path where the rendered HTML will be saved
-    serverURL: 'http://<url or IP>:3000/get-text',  // Server's URL to fetch the dynamic text values
+    originalHTMLPath: '/your-folder/index.html',  // Path to the original HTML file
+    outputHTMLPath: '/your-folder/output.html',   // Path where the rendered HTML will be saved
+    serverURL: 'http://<server IP>:3000/get-text',  // Server's URL to fetch the dynamic text values
+        imagePaths: {
+            smallcontainer: 'https://<githubUsername>.github.io/TRMNL/smallContainer.png',
+            mediumcontainer: 'https://<githubUsername>.github.io/TRMNL/mediumContainer.png',
+            largecontainer: 'https://<githubUsername>.github.io/TRMNL/largeContainer.png'
+   }
   },
   serverConfig: {
     port: 3000,  // Port on which the server will listen
-    staticFilesDirectory: 'ouput location',  // Path to serve static files
-    textFilePath: '/<folder structure>/textValues.json'  // Path to the JSON file with text values
-  }
-  gitConfig: {
-    username: 'your-git-username',
-    password: 'your-git-password', // You can also use a personal access token instead of password
-    repoURL: 'https://github.com/your-username/your-repository.git', // Git repository URL
-    folderPath: 'path/to/your/local/folder', // Path to the folder containing the file you want to upload
-    commitMessage: 'Uploading file from local server',
-    fileToUpload: 'path/to/your/local/file', // The specific file you want to upload
-    branchName: 'main', // The branch to upload the file to
-};
+    staticFilesDirectory: '/yourfolder/folder',  // Path to serve static files
+    textFilePath: '/home/<username or folder>/espresso-api/textValues.json'  // Path to the JSON file with text values
+  },
+    github: {
+        username: 'username',  // Replace with your GitHub username
+        token: 'tokenText',        // Replace with your GitHub personal access token
+        repo: '<username>.github.io',       // Your GitHub Pages repository name
+        branch: 'main',                    // Branch for GitHub Pages, usually 'main'
+    },
+    file: {
+        sourceFile: '/yourFolder/output.html',  // Path to the generated output.html file
+        destinationFolder: 'foldername',  // Folder in your GitHub Pages repo
+    },
 
 };
