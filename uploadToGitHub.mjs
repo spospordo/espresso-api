@@ -2,7 +2,9 @@
 import fetch from 'node-fetch';  // Use import instead of require
 import fs from 'fs';
 import path from 'path';
-import { config } from './config.js'; // Make sure config.js is using export, not module.exports
+
+// Default import for CommonJS module
+import config from './config.js'; // Import the default export from config.js
 
 // Function to upload content to GitHub Pages
 async function uploadToGitHub() {
