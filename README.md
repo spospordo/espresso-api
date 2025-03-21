@@ -14,7 +14,7 @@ all the values hardcoded into the html file. This makes it portable so the serve
 
 Clone repository
 ```
-npm install
+git clone https://github.com/spospordo/espresso-api.git
 ```
 ## update
 ```
