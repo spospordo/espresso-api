@@ -3,7 +3,7 @@ const cors = require('cors');
 const fs = require('fs');
 const { exec } = require('child_process');  // Import exec to run the script
 const app = express();
-const { serverConfig } = require('./config'); // Import the server configuration from config.js
+const { serverConfig, originalHTMLPath, localFilePath, Host } = require('./config'); // Import necessary settings
 
 // Enable CORS
 app.use(cors());
@@ -70,7 +70,7 @@ app.post('/update-texts', express.json(), (req, res) => {
 
     // After the update, wait for 5 seconds and then run the generateHTML script
     setTimeout(() => {
-        if (!serverConfig.originalHTMLPath) {
+        if (!originalHTMLPath) {
             console.log("Skipping generateHTML.js as originalHTMLPath is blank or null.");
             return;
         }
@@ -89,7 +89,7 @@ app.post('/update-texts', express.json(), (req, res) => {
 
     // After running generateHTML.js, wait for 5 seconds and run convertToJpeg.js
     setTimeout(() => {
-        if (!serverConfig.localFilePath) {
+        if (!localFilePath) {
             console.log("Skipping convertToJpeg.js as localFilePath is blank or null.");
             return;
         }
@@ -108,7 +108,7 @@ app.post('/update-texts', express.json(), (req, res) => {
 
     // After running convertToJpeg.js, wait for another 5 seconds and run uploadToGitHub.mjs
     setTimeout(() => {
-        if (!serverConfig.Host) {
+        if (!Host) {
             console.log("Skipping uploadToGitHub.mjs as Host is blank or null.");
             return;
         }
