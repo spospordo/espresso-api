@@ -22,7 +22,7 @@ async function uploadToFTP() {
     console.log('FTP connection established.');
 
     // Get the local file path from config.js
-    const localFilePath = fileConfig.localFilePath;
+    const localFilePath = fileConfig.localFilePathFTP;
     
     // Check if the local file exists before attempting to upload
     if (!localFilePath || !fs.existsSync(localFilePath)) {
