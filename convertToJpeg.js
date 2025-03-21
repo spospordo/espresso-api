@@ -11,7 +11,7 @@ async function captureScreenshot() {
 
   const page = await browser.newPage();
 
-  const filePath = fileConfig.localFilePathFTP; // URL to capture from
+  const filePath = fileConfig.localFilePath; // URL to capture from
   try {
     // Increase the timeout and wait until DOM is loaded
     await page.goto(filePath, { waitUntil: 'domcontentloaded', timeout: 60000 }); // 60 seconds timeout
