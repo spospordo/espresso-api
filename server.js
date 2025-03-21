@@ -108,7 +108,7 @@ app.post('/update-texts', express.json(), (req, res) => {
 
     // After running convertToJpeg.js, wait for another 5 seconds and run uploadToGitHub.mjs
     setTimeout(() => {
-        if (!ftpConfig.Host) {
+        if (!github.username) {
             console.log("Skipping uploadToGitHub.mjs as Host is blank or null.");
             return;
         }
