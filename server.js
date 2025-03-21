@@ -83,8 +83,7 @@ app.post('/update-texts', express.json(), (req, res) => {
         });
     }, 5000); // Delay of 5 seconds (5000 milliseconds)
 
-    res.status(200).send('Text values updated and HTML generation triggered.');
-
+    // After running generateHTML.js, wait for 5 seconds and run convertToJpeg.js
     setTimeout(() => {
         console.log('Running the convertToJpeg.js script...');
         exec('node convertToJpeg.js', (error, stdout, stderr) => {
@@ -97,10 +96,25 @@ app.post('/update-texts', express.json(), (req, res) => {
                 console.error(`convertToJpeg.js stderr: ${stderr}`);
             }
         });
-    }, 5000); // Delay of 5 seconds (5000 milliseconds) before running convertToJpeg.js
+    }, 10000); // Delay of 10 seconds (5000 + 5000) before running convertToJpeg.js
 
-   //Add return here to prevent any further code from executing after response is sent
-   return;
+    // After running convertToJpeg.js, wait for another 5 seconds and run uploadToGitHub.mjs
+    setTimeout(() => {
+        console.log('Running the uploadToGitHub.mjs script...');
+        exec('node --experimental-modules uploadToGitHub.mjs', (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error executing uploadToGitHub.mjs: ${error}`);
+                return;
+            }
+            console.log(`uploadToGitHub.mjs output: ${stdout}`);
+            if (stderr) {
+                console.error(`uploadToGitHub.mjs stderr: ${stderr}`);
+            }
+        });
+    }, 15000); // Delay of 15 seconds (5000 + 5000 + 5000) before running uploadToGitHub.mjs
+
+    // Add return here to prevent any further code from executing after response is sent
+    return;
 });
 
 // Start the server (using the port from config.js)
