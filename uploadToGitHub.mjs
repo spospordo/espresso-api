@@ -1,7 +1,8 @@
-const fs = require('fs');
-const path = require('path');
-const fetch = require('node-fetch'); // Make sure to install node-fetch
-const config = require('./config.js');
+// uploadToGitHub.mjs
+import fetch from 'node-fetch';  // Use import instead of require
+import fs from 'fs';
+import path from 'path';
+import { config } from './config.js'; // Make sure config.js is using export, not module.exports
 
 // Function to upload content to GitHub Pages
 async function uploadToGitHub() {
