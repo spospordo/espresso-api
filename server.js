@@ -84,6 +84,21 @@ app.post('/update-texts', express.json(), (req, res) => {
             if (stderr) {
                 console.error(`generateHTML.js stderr: ${stderr}`);
             }
+
+            // Now, run ftpFile.js after generateHTML.js has finished
+            setTimeout(() => {
+                console.log('Running the ftpFile.js script...');
+                exec('node ftpFile.js', (error, stdout, stderr) => {
+                    if (error) {
+                        console.error(`Error executing ftpFile.js: ${error}`);
+                        return;
+                    }
+                    console.log(`ftpFile.js output: ${stdout}`);
+                    if (stderr) {
+                        console.error(`ftpFile.js stderr: ${stderr}`);
+                    }
+                });
+            }, 5000); // 5-second delay after generateHTML.js
         });
     }, 5000); // Delay of 5 seconds (5000 milliseconds)
 
