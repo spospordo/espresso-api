@@ -1,6 +1,8 @@
-const axios = require('axios');
-const fs = require('fs');
-const config = require('./config.js');
+// uploadToGitHub.mjs
+
+import axios from 'axios';  // Use import instead of require
+import fs from 'fs';
+import config from './config.js';  // Assuming config.js is using CommonJS (module.exports)
 
 // Function to upload content to GitHub Pages
 async function uploadToGitHub() {
@@ -44,7 +46,7 @@ async function uploadToGitHub() {
             console.log('File uploaded successfully to GitHub Pages');
         }
     } catch (error) {
-        // If the file doesn't exist, the GET request will throw an error (404). 
+        // If the file doesn't exist, the GET request will throw an error (404).
         // We will catch that error and proceed to upload a new file.
         if (error.response && error.response.status === 404) {
             console.log('File does not exist, uploading a new file...');
