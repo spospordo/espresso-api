@@ -1,4 +1,4 @@
-# espresso-api
+# espresso-api README
 I use this project to track espresso recipe for 3 different beans and display on my TRMNL eInk display. 
 
 Why so complex? In creating this site, I've found TRMNL was not able to consistently access my custom website from some free hosting services, so I ended up using github pages.  So my code will run a server locally (on a pi) generate an HTML file that can be exported to github pages, and ensure all images have direct links. In the past I also generated screenshots of the website, however, TRMNL does not check for updated images; it just loads them once and is done. 
