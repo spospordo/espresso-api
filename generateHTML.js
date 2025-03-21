@@ -30,8 +30,11 @@ const path = require('path');
             return;
         }
 
-        // Use JSDOM to manipulate the HTML content
-        const dom = new JSDOM(htmlContent);
+        // Use JSDOM to manipulate the HTML content and retain the DOCTYPE
+        const dom = new JSDOM(htmlContent, { 
+            contentType: 'text/html', 
+            includeNodeLocations: true 
+        });
 
         // Strip all <script> tags from the DOM
         const scripts = dom.window.document.querySelectorAll('script');
@@ -63,8 +66,8 @@ const path = require('path');
             }
         });
 
-        // Save the updated HTML to the output path
-        fs.writeFile(outputHTMLPath, dom.window.document.documentElement.outerHTML, 'utf8', (err) => {
+        // Save the updated HTML to the output path, ensuring DOCTYPE is preserved
+        fs.writeFile(outputHTMLPath, dom.serialize(), 'utf8', (err) => {
             if (err) {
                 console.error('Error saving the updated HTML file:', err);
             } else {
