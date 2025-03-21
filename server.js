@@ -68,28 +68,20 @@ app.post('/update-texts', express.json(), (req, res) => {
     saveTextValues();  // Save the updated values to the JSON file
     res.status(200).send('Text values updated successfully');
 
-    // After the update, wait for 5 seconds and then run the generateHTML script
+    // Run the generateHTML.js script after a 5-second delay
     setTimeout(() => {
-        if (serverConfig.originalHTMLPath) {
-            console.log('Running the generateHTML.js script...');
-            exec('node generateHTML.js', (error, stdout, stderr) => {
-                if (error) {
-                    console.error(`Error executing generateHTML.js: ${error}`);
-                    return;
-                }
-                console.log(`generateHTML.js output: ${stdout}`);
-                if (stderr) {
-                    console.error(`generateHTML.js stderr: ${stderr}`);
-                }
-            });
-        } else {
-            console.log('Skipping generateHTML.js as originalHTMLPath is missing in config.js');
-        }
-    }, 5000); // Delay of 5 seconds (5000 milliseconds)
+        console.log('Running the generateHTML.js script...');
+        exec('node generateHTML.js', (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error executing generateHTML.js: ${error}`);
+                return;
+            }
+            console.log(`generateHTML.js output: ${stdout}`);
+            if (stderr) {
+                console.error(`generateHTML.js stderr: ${stderr}`);
+            }
 
-    // After running generateHTML.js, wait for 5 seconds and run convertToJpeg.js
-    setTimeout(() => {
-        if (serverConfig.localFilePath) {
+            // After generateHTML.js completes, run convertToJpeg.js
             console.log('Running the convertToJpeg.js script...');
             exec('node convertToJpeg.js', (error, stdout, stderr) => {
                 if (error) {
@@ -100,30 +92,35 @@ app.post('/update-texts', express.json(), (req, res) => {
                 if (stderr) {
                     console.error(`convertToJpeg.js stderr: ${stderr}`);
                 }
-            });
-        } else {
-            console.log('Skipping convertToJpeg.js as localFilePath is missing in config.js');
-        }
-    }, 10000); // Delay of 10 seconds (5000 + 5000) before running convertToJpeg.js
 
-    // After running convertToJpeg.js, wait for another 5 seconds and run uploadToGitHub.mjs
-    setTimeout(() => {
-        if (serverConfig.Host) {
-            console.log('Running the uploadToGitHub.mjs script...');
-            exec('node --experimental-modules uploadToGitHub.mjs', (error, stdout, stderr) => {
-                if (error) {
-                    console.error(`Error executing uploadToGitHub.mjs: ${error}`);
-                    return;
-                }
-                console.log(`uploadToGitHub.mjs output: ${stdout}`);
-                if (stderr) {
-                    console.error(`uploadToGitHub.mjs stderr: ${stderr}`);
-                }
+                // After convertToJpeg.js completes, run ftpFile.js
+                console.log('Running the ftpFile.js script...');
+                exec('node ftpFile.js', (error, stdout, stderr) => {
+                    if (error) {
+                        console.error(`Error executing ftpFile.js: ${error}`);
+                        return;
+                    }
+                    console.log(`ftpFile.js output: ${stdout}`);
+                    if (stderr) {
+                        console.error(`ftpFile.js stderr: ${stderr}`);
+                    }
+
+                    // After ftpFile.js completes, run uploadToGitHub.mjs
+                    console.log('Running the uploadToGitHub.mjs script...');
+                    exec('node --experimental-modules uploadToGitHub.mjs', (error, stdout, stderr) => {
+                        if (error) {
+                            console.error(`Error executing uploadToGitHub.mjs: ${error}`);
+                            return;
+                        }
+                        console.log(`uploadToGitHub.mjs output: ${stdout}`);
+                        if (stderr) {
+                            console.error(`uploadToGitHub.mjs stderr: ${stderr}`);
+                        }
+                    });
+                });
             });
-        } else {
-            console.log('Skipping uploadToGitHub.mjs as Host is missing in config.js');
-        }
-    }, 15000); // Delay of 15 seconds (5000 + 5000 + 5000) before running uploadToGitHub.mjs
+        });
+    }, 5000); // Delay of 5 seconds (5000 milliseconds) before running generateHTML.js
 
     // Add return here to prevent any further code from executing after response is sent
     return;
