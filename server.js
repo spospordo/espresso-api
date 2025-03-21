@@ -104,7 +104,7 @@ app.post('/update-texts', express.json(), (req, res) => {
 
                     // After convertToJpeg.js is done, wait for 3 seconds and run ftpFile.js and uploadToGitHub.mjs
                     setTimeout(() => {
-                        if (!ftpConfig.server) {
+                        if (!ftpConfig.host) {
                             console.log("Skipping ftpFile.js as FTP settings are missing.");
                             return;
                         }
