@@ -33,9 +33,21 @@ module.exports = {
         repo: '<username>.github.io',       // Your GitHub Pages repository name
         branch: 'main',                    // Branch for GitHub Pages, usually 'main'
     },
-    file: {
-        sourceFile: '/yourFolder/output.html',  // Path to the generated output.html file
-        destinationFolder: 'foldername',  // Folder in your GitHub Pages repo
+   file: {
+  filesToUpload: [
+    {
+      sourceFile: '/yourFolder/output.html',
+      destinationPath: 'foldername/output.html'
     },
+    {
+      sourceFile: '/yourFolder/output.jpeg',
+      destinationPath: 'foldername/output.jpeg'
+    },
+    {
+      sourceFile: '/yourFolder/logs.txt',
+      destinationPath: 'foldername/logs.txt'
+    }
+  ]
+}
 
 };
