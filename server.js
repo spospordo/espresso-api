@@ -57,13 +57,10 @@ app.post('/update-texts', express.json(), (req, res) => {
 
     // Loop through each key-value pair and update them in the textValues object
     Object.keys(updatedTextValues).forEach(key => {
-        if (textValues[key] !== undefined) {
-            textValues[key] = updatedTextValues[key];  // Update the value in the object
-            console.log(`Updated ${key} to ${updatedTextValues[key]}`);
-        } else {
-            console.error(`Invalid key: ${key}`);
-        }
-    });
+    textValues[key] = updatedTextValues[key];  // Add or update
+    console.log(`Set ${key} to ${updatedTextValues[key]}`);
+});
+
 
     saveTextValues();  // Save the updated values to the JSON file
     res.status(200).send('Text values updated successfully');
