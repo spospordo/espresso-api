@@ -122,7 +122,7 @@ async function scrapeComingSoon() {
 </body>
 </html>`;
 
-    fs.writeFileSync('output.html', htmlContent.trim());
+    fs.writeFileSync('outputScrapeVidiots.html', htmlContent.trim());
     console.log(`[${new Date().toLocaleString()}] Output written to output.html`);
   } catch (err) {
     console.error('Error scraping:', err);
@@ -137,3 +137,4 @@ cron.schedule('0 6,12 * * *', () => {
 
 // Run immediately at startup
 scrapeComingSoon();
+
