@@ -1,15 +1,28 @@
+// scrape.js
+// Requires: axios, cheerio, node-cron
+// Install: npm install axios cheerio node-cron
+
 const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
+const path = require('path');
 const cron = require('node-cron');
 
 const url = 'https://vidiotsfoundation.org/coming-soon/';
 
 function truncateText(text, maxLength = 180) {
-  if (text.length > maxLength) {
-    return text.substring(0, maxLength).trim() + '…';
+  if (!text) return '';
+  return text.length > maxLength ? text.substring(0, maxLength).trim() + '…' : text;
+}
+
+// Save image locally
+async function downloadImage(url, filepath) {
+  try {
+    const response = await axios({ url, responseType: 'arraybuffer' });
+    fs.writeFileSync(filepath, response.data);
+  } catch (err) {
+    console.error(`❌ Failed to download image ${url}:`, err.message);
   }
-  return text;
 }
 
 async function scrapeComingSoon() {
@@ -19,32 +32,43 @@ async function scrapeComingSoon() {
 
     const movies = [];
 
-    // Grab the first 6 movie blocks
+    // Create images folder if not exists
+    const imgDir = path.join(__dirname, 'images');
+    if (!fs.existsSync(imgDir)) {
+      fs.mkdirSync(imgDir);
+    }
+
     $('div.showtimes-description').slice(0, 6).each((i, el) => {
       const title = $(el).find('h2.show-title a.title').text().trim();
 
-      // Collect all showtimes
+      // Get all showtimes as array of strings
       const times = [];
       $(el).find('ol.showtimes.showtime-button-row li a.showtime').each((j, st) => {
         times.push($(st).text().trim());
       });
 
-      // Description (truncate)
       let description = $(el).find('div.show-content p').first().text().trim();
       description = truncateText(description, 180);
 
-      // Poster image
-      const poster = $(el).find('div.show-poster img').attr('src') || '';
+      const posterUrl = $(el).find('div.show-poster img').attr('src') || '';
 
       if (title) {
         movies.push({
           title,
-          times: times.join(', '),
+          times,
           description,
-          poster,
+          posterUrl,
+          posterFile: path.join('images', `movie${i + 1}.jpg`)
         });
       }
     });
+
+    // Download posters locally
+    for (let m of movies) {
+      if (m.posterUrl) {
+        await downloadImage(m.posterUrl, path.join(__dirname, m.posterFile));
+      }
+    }
 
     // Build HTML
     const htmlContent = `
@@ -82,12 +106,13 @@ async function scrapeComingSoon() {
     }
     .poster img {
       width: 100px;
-      height: auto;
+      height: 150px;
       object-fit: cover;
       border: 1px solid #555;
     }
     .info {
       flex: 1;
+      overflow: hidden;
     }
     .title {
       font-weight: bold;
@@ -110,11 +135,13 @@ async function scrapeComingSoon() {
   ${movies.map(m => `
     <div class="movie">
       <div class="poster">
-        ${m.poster ? `<img src="${m.poster}" alt="${m.title} poster">` : ''}
+        ${m.posterUrl ? `<img src="${m.posterFile}" alt="${m.title} poster">` : ''}
       </div>
       <div class="info">
         <div class="title">${m.title}</div>
-        <div class="times">${m.times}</div>
+        <div class="times">
+          ${m.times.map(t => `<div>${t}</div>`).join('')}
+        </div>
         <div class="description">${m.description}</div>
       </div>
     </div>
@@ -122,19 +149,18 @@ async function scrapeComingSoon() {
 </body>
 </html>`;
 
-    fs.writeFileSync('outputScrapeVidiots.html', htmlContent.trim());
-    console.log(`[${new Date().toLocaleString()}] Output written to output.html`);
+    fs.writeFileSync('output.html', htmlContent.trim());
+    console.log(`[${new Date().toLocaleString()}] ✅ Output written to output.html`);
   } catch (err) {
-    console.error('Error scraping:', err);
+    console.error('❌ Error scraping:', err.message);
   }
 }
 
-// Run at 6 AM and 12 PM every day
+// Run at 6 AM and 12 PM daily
 cron.schedule('0 6,12 * * *', () => {
-  console.log('Running scheduled scrape...');
+  console.log('⏰ Running scheduled scrape...');
   scrapeComingSoon();
 });
 
-// Run immediately at startup
+// Run once immediately
 scrapeComingSoon();
-
