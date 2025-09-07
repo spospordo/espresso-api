@@ -40,12 +40,20 @@ async function scrapeComingSoon() {
     $('div.showtimes-description').slice(0, 6).each((i, el) => {
       const title = $(el).find('h2.show-title a.title').text().trim();
 
-      // Extract dates
+      // Extract multiple dates (from ul > li)
       const dates = [];
-      $(el).find('div.selected-date.show-datelist, div.selected-date.show-datelist.single-date').each((j, d) => {
-        const dateTxt = $(d).text().trim();
+      $(el).find('div.selected-date.show-datelist ul li').each((j, li) => {
+        const dateTxt = $(li).text().trim();
         if (dateTxt) dates.push(dateTxt);
       });
+
+      // Handle single-date (no ul)
+      if (dates.length === 0) {
+        $(el).find('div.selected-date.show-datelist.single-date').each((j, d) => {
+          const dateTxt = $(d).text().trim();
+          if (dateTxt) dates.push(dateTxt);
+        });
+      }
 
       // Extract times
       const times = [];
@@ -156,7 +164,7 @@ async function scrapeComingSoon() {
       <div class="info">
         <div class="title">${m.title}</div>
         <div class="schedule">
-          ${m.dates.length > 0 ? m.dates.join(', ') : ''} ${m.times.length > 0 ? ' — ' + m.times.join(', ') : ''}
+          ${m.dates.length > 0 ? m.dates.join(', ') : ''}${m.times.length > 0 ? ' — ' + m.times.join(', ') : ''}
         </div>
         <div class="description">${m.description}</div>
       </div>
