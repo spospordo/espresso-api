@@ -40,54 +40,47 @@ async function scrapeComingSoon() {
     $('div.showtimes-description').slice(0, 6).each((i, el) => {
       const title = $(el).find('h2.show-title a.title').text().trim();
 
-      // Extract multiple dates (<ul><li><span>)
+      // --- Extract dates ---
       const dates = [];
+      // Case 1: multiple dates inside ul > li > span
       $(el).find('div.selected-date.show-datelist ul li span').each((j, span) => {
         const dateTxt = $(span).text().trim();
         if (dateTxt) dates.push(dateTxt);
       });
-
-      // Handle single-date
+      // Case 2: single-date version (no ul)
       if (dates.length === 0) {
-        $(el).find('div.selected-date.show-datelist.single-date').each((j, d) => {
-          const dateTxt = $(d).text().trim();
+        $(el).find('div.selected-date.show-datelist.single-date span').each((j, span) => {
+          const dateTxt = $(span).text().trim();
           if (dateTxt) dates.push(dateTxt);
         });
       }
 
-      // Extract times
+      // --- Extract times ---
       const times = [];
       $(el).find('ol.showtimes.showtime-button-row li a.showtime').each((j, st) => {
         const txt = $(st).text().trim();
         if (txt) times.push(txt);
       });
 
+      // --- Description ---
       let description = $(el).find('div.show-content p').first().text().trim();
       description = truncateText(description, 180);
 
-      // Get poster URL and normalize
+      // --- Poster ---
       let posterUrl = $(el).find('div.show-poster img').attr('src') || '';
       if (posterUrl.startsWith('//')) {
         posterUrl = 'https:' + posterUrl;
       } else if (posterUrl.startsWith('/')) {
         posterUrl = BASE_URL + posterUrl;
       }
-
       const posterFile = path.join(imgDir, `vidiotsPoster${i + 1}.jpg`);
 
       if (title) {
-        movies.push({
-          title,
-          dates,
-          times,
-          description,
-          posterUrl,
-          posterFile
-        });
+        movies.push({ title, dates, times, description, posterUrl, posterFile });
       }
     });
 
-    // Download posters locally
+    // Download posters
     for (const m of movies) {
       if (m.posterUrl) {
         await downloadImage(m.posterUrl, m.posterFile);
