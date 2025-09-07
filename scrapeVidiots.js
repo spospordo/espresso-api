@@ -1,14 +1,12 @@
 // vidiots.js
-// Requires: axios, cheerio, node-cron
-// Install with: npm install axios cheerio node-cron
-
 const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
 const path = require('path');
 const cron = require('node-cron');
 
-const url = 'https://vidiotsfoundation.org/coming-soon/';
+const BASE_URL = 'https://vidiotsfoundation.org';
+const url = `${BASE_URL}/coming-soon/`;
 
 function truncateText(text, maxLength = 180) {
   if (!text) return '';
@@ -32,7 +30,7 @@ async function scrapeComingSoon() {
 
     const movies = [];
 
-    // Create images folder if not exists
+    // Ensure images folder exists
     const imgDir = path.join(__dirname, 'images');
     if (!fs.existsSync(imgDir)) {
       fs.mkdirSync(imgDir);
@@ -41,16 +39,21 @@ async function scrapeComingSoon() {
     $('div.showtimes-description').slice(0, 6).each((i, el) => {
       const title = $(el).find('h2.show-title a.title').text().trim();
 
-      // Get all showtimes as array of strings
+      // Collect all showtimes (date + time)
       const times = [];
       $(el).find('ol.showtimes.showtime-button-row li a.showtime').each((j, st) => {
-        times.push($(st).text().trim());
+        const txt = $(st).text().trim();
+        if (txt) times.push(txt);
       });
 
       let description = $(el).find('div.show-content p').first().text().trim();
       description = truncateText(description, 180);
 
-      const posterUrl = $(el).find('div.show-poster img').attr('src') || '';
+      // Get poster and ensure it's an absolute URL
+      let posterUrl = $(el).find('div.show-poster img').attr('src') || '';
+      if (posterUrl && posterUrl.startsWith('/')) {
+        posterUrl = BASE_URL + posterUrl;
+      }
 
       if (title) {
         movies.push({
@@ -63,7 +66,7 @@ async function scrapeComingSoon() {
       }
     });
 
-    // Download posters locally
+    // Download posters
     for (let m of movies) {
       if (m.posterUrl) {
         await downloadImage(m.posterUrl, path.join(__dirname, m.posterFile));
@@ -83,8 +86,8 @@ async function scrapeComingSoon() {
       height: 480px;
       margin: 0;
       padding: 10px;
-      background: #fff;   /* White background */
-      color: #000;        /* Black text */
+      background: #fff;
+      color: #000;
       font-family: sans-serif;
       overflow: hidden;
     }
@@ -108,7 +111,7 @@ async function scrapeComingSoon() {
       height: 150px;
       object-fit: cover;
       border: 1px solid #aaa;
-      filter: grayscale(100%); /* Force posters grayscale */
+      filter: grayscale(100%);
     }
     .info {
       flex: 1;
@@ -156,11 +159,11 @@ async function scrapeComingSoon() {
   }
 }
 
-// Schedule scraping at 6 AM and 12 PM every day
+// Run at 6 AM and 12 PM daily
 cron.schedule('0 6,12 * * *', () => {
   console.log('⏰ Running scheduled scrape...');
   scrapeComingSoon();
 });
 
-// Run once immediately when script starts
+// Run immediately when script is executed
 scrapeComingSoon();
