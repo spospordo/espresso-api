@@ -14,12 +14,13 @@ function truncateText(text, maxLength = 180) {
 }
 
 // Save image locally
-async function downloadImage(url, filepath) {
+async function downloadImage(imageUrl, localFile) {
   try {
-    const response = await axios({ url, responseType: 'arraybuffer' });
-    fs.writeFileSync(filepath, response.data);
+    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    fs.writeFileSync(localFile, response.data);
+    console.log(`✅ Saved image: ${localFile}`);
   } catch (err) {
-    console.error(`❌ Failed to download image ${url}:`, err.message);
+    console.error(`❌ Failed to download image ${imageUrl}: ${err.message}`);
   }
 }
 
@@ -49,27 +50,25 @@ async function scrapeComingSoon() {
       let description = $(el).find('div.show-content p').first().text().trim();
       description = truncateText(description, 180);
 
-      // Get poster and ensure it's an absolute URL
+      // Get poster URL and normalize
       let posterUrl = $(el).find('div.show-poster img').attr('src') || '';
-      if (posterUrl && posterUrl.startsWith('/')) {
+      if (posterUrl.startsWith('//')) {
+        posterUrl = 'https:' + posterUrl;
+      } else if (posterUrl.startsWith('/')) {
         posterUrl = BASE_URL + posterUrl;
       }
 
+      const posterFile = path.join(imgDir, `vidiotsPoster${i + 1}.jpg`);
+
       if (title) {
-        movies.push({
-          title,
-          times,
-          description,
-          posterUrl,
-          posterFile: path.join('images', `vidiotsPoster${i + 1}.jpg`)
-        });
+        movies.push({ title, times, description, posterUrl, posterFile });
       }
     });
 
-    // Download posters
-    for (let m of movies) {
+    // Download posters locally
+    for (const m of movies) {
       if (m.posterUrl) {
-        await downloadImage(m.posterUrl, path.join(__dirname, m.posterFile));
+        await downloadImage(m.posterUrl, m.posterFile);
       }
     }
 
@@ -138,13 +137,11 @@ async function scrapeComingSoon() {
   ${movies.map(m => `
     <div class="movie">
       <div class="poster">
-        ${m.posterUrl ? `<img src="${m.posterFile}" alt="${m.title} poster">` : ''}
+        ${m.posterUrl ? `<img src="images/${path.basename(m.posterFile)}" alt="${m.title} poster">` : ''}
       </div>
       <div class="info">
         <div class="title">${m.title}</div>
-        <div class="times">
-          ${m.times.map(t => `<div>${t}</div>`).join('')}
-        </div>
+        <div class="times">${m.times.map(t => `<div>${t}</div>`).join('')}</div>
         <div class="description">${m.description}</div>
       </div>
     </div>
@@ -159,7 +156,7 @@ async function scrapeComingSoon() {
   }
 }
 
-// Run at 6 AM and 12 PM daily
+// Schedule scraping at 6 AM and 12 PM daily
 cron.schedule('0 6,12 * * *', () => {
   console.log('⏰ Running scheduled scrape...');
   scrapeComingSoon();
