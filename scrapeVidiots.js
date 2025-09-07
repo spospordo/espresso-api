@@ -1,6 +1,6 @@
-// scrape.js
+// vidiots.js
 // Requires: axios, cheerio, node-cron
-// Install: npm install axios cheerio node-cron
+// Install with: npm install axios cheerio node-cron
 
 const axios = require('axios');
 const cheerio = require('cheerio');
@@ -58,7 +58,7 @@ async function scrapeComingSoon() {
           times,
           description,
           posterUrl,
-          posterFile: path.join('images', `movie${i + 1}.jpg`)
+          posterFile: path.join('images', `vidiotsPoster${i + 1}.jpg`)
         });
       }
     });
@@ -83,10 +83,9 @@ async function scrapeComingSoon() {
       height: 480px;
       margin: 0;
       padding: 10px;
-      background: #222;
-      color: #eee;
+      background: #fff;   /* White background */
+      color: #000;        /* Black text */
       font-family: sans-serif;
-      filter: grayscale(100%);
       overflow: hidden;
     }
     h1 {
@@ -108,7 +107,8 @@ async function scrapeComingSoon() {
       width: 100px;
       height: 150px;
       object-fit: cover;
-      border: 1px solid #555;
+      border: 1px solid #aaa;
+      filter: grayscale(100%); /* Force posters grayscale */
     }
     .info {
       flex: 1;
@@ -156,11 +156,11 @@ async function scrapeComingSoon() {
   }
 }
 
-// Run at 6 AM and 12 PM daily
+// Schedule scraping at 6 AM and 12 PM every day
 cron.schedule('0 6,12 * * *', () => {
   console.log('⏰ Running scheduled scrape...');
   scrapeComingSoon();
 });
 
-// Run once immediately
+// Run once immediately when script starts
 scrapeComingSoon();
