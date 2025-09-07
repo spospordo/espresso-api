@@ -40,14 +40,14 @@ async function scrapeComingSoon() {
     $('div.showtimes-description').slice(0, 6).each((i, el) => {
       const title = $(el).find('h2.show-title a.title').text().trim();
 
-      // Extract multiple dates (from ul > li)
+      // Extract multiple dates (<ul><li><span>)
       const dates = [];
-      $(el).find('div.selected-date.show-datelist ul li').each((j, li) => {
-        const dateTxt = $(li).text().trim();
+      $(el).find('div.selected-date.show-datelist ul li span').each((j, span) => {
+        const dateTxt = $(span).text().trim();
         if (dateTxt) dates.push(dateTxt);
       });
 
-      // Handle single-date (no ul)
+      // Handle single-date
       if (dates.length === 0) {
         $(el).find('div.selected-date.show-datelist.single-date').each((j, d) => {
           const dateTxt = $(d).text().trim();
