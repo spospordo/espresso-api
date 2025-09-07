@@ -40,7 +40,14 @@ async function scrapeComingSoon() {
     $('div.showtimes-description').slice(0, 6).each((i, el) => {
       const title = $(el).find('h2.show-title a.title').text().trim();
 
-      // Collect all showtimes (date + time)
+      // Extract dates
+      const dates = [];
+      $(el).find('div.selected-date.show-datelist, div.selected-date.show-datelist.single-date').each((j, d) => {
+        const dateTxt = $(d).text().trim();
+        if (dateTxt) dates.push(dateTxt);
+      });
+
+      // Extract times
       const times = [];
       $(el).find('ol.showtimes.showtime-button-row li a.showtime').each((j, st) => {
         const txt = $(st).text().trim();
@@ -61,7 +68,14 @@ async function scrapeComingSoon() {
       const posterFile = path.join(imgDir, `vidiotsPoster${i + 1}.jpg`);
 
       if (title) {
-        movies.push({ title, times, description, posterUrl, posterFile });
+        movies.push({
+          title,
+          dates,
+          times,
+          description,
+          posterUrl,
+          posterFile
+        });
       }
     });
 
@@ -121,7 +135,7 @@ async function scrapeComingSoon() {
       font-size: 1.05em;
       margin-bottom: 2px;
     }
-    .times {
+    .schedule {
       font-style: italic;
       font-size: 0.9em;
       margin-bottom: 3px;
@@ -141,7 +155,9 @@ async function scrapeComingSoon() {
       </div>
       <div class="info">
         <div class="title">${m.title}</div>
-        <div class="times">${m.times.map(t => `<div>${t}</div>`).join('')}</div>
+        <div class="schedule">
+          ${m.dates.length > 0 ? m.dates.join(', ') : ''} ${m.times.length > 0 ? ' — ' + m.times.join(', ') : ''}
+        </div>
         <div class="description">${m.description}</div>
       </div>
     </div>
