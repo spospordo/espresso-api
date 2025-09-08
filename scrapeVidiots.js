@@ -99,6 +99,7 @@ if (dateList.length) {
   }
 }
 const schedule = dateTimeGroups.join(' and ');
+      
       // Description
       let description = $(el).find('div.show-content p').first().text().trim();
       description = truncateText(description, 180);
@@ -199,4 +200,5 @@ cron.schedule('0 6,12 * * *', () => {
 
 // Run immediately
 scrapeComingSoon();
+
 
