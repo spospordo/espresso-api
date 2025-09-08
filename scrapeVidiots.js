@@ -12,27 +12,36 @@ function truncateText(text, maxLength = 180) {
   return text.length > maxLength ? text.substring(0, maxLength).trim() + '…' : text;
 }
 
-// --- Save image with streaming ---
+// --- Save image with extra debug logging ---
 async function downloadImage(imageUrl, localFile) {
   try {
+    console.log(`➡️  Attempting to download: ${imageUrl}`);
     const writer = fs.createWriteStream(localFile);
     const response = await axios.get(imageUrl, { responseType: 'stream' });
+    console.log(`📥 Response status for ${imageUrl}: ${response.status}`);
+
     response.data.pipe(writer);
     return new Promise((resolve, reject) => {
       writer.on('finish', () => {
-        console.log(`✅ Saved: ${localFile}`);
+        console.log(`✅ Image saved: ${localFile}`);
         resolve();
       });
-      writer.on('error', reject);
+      writer.on('error', (err) => {
+        console.error(`❌ Write error for ${localFile}:`, err.message);
+        reject(err);
+      });
     });
   } catch (err) {
-    console.error(`❌ Failed to download ${imageUrl}: ${err.message}`);
+    console.error(`❌ Download failed for ${imageUrl}: ${err.message}`);
   }
 }
 
 async function scrapeComingSoon() {
   try {
+    console.log(`🌐 Fetching: ${url}`);
     const { data: html } = await axios.get(url);
+    console.log(`📄 Page downloaded, length=${html.length} chars`);
+
     const $ = cheerio.load(html);
 
     const movies = [];
@@ -41,12 +50,14 @@ async function scrapeComingSoon() {
     const imgDir = path.join(__dirname, 'images');
     if (!fs.existsSync(imgDir)) {
       fs.mkdirSync(imgDir);
+      console.log(`📂 Created images folder at: ${imgDir}`);
     }
 
     $('div.showtimes-description').slice(0, 6).each((i, el) => {
       const title = $(el).find('h2.show-title a.title').text().trim();
+      console.log(`🎬 Movie found: "${title}"`);
 
-      // --- Dates + times ---
+      // Dates + times
       const dateTimePairs = [];
       $(el).find('ul.datelist li.show-date').each((j, li) => {
         const dateTxt = $(li).find('span').text().trim();
@@ -57,15 +68,10 @@ async function scrapeComingSoon() {
           if (t) times.push(t);
         });
         if (dateTxt) {
-          if (times.length > 0) {
-            dateTimePairs.push(`${dateTxt} (${times.join(', ')})`);
-          } else {
-            dateTimePairs.push(dateTxt);
-          }
+          dateTimePairs.push(`${dateTxt} (${times.join(', ')})`);
         }
       });
 
-      // --- Fallback: single date ---
       if (dateTimePairs.length === 0) {
         const dateTxt = $(el).find('div.selected-date.show-datelist.single-date span').text().trim();
         const times = [];
@@ -78,14 +84,18 @@ async function scrapeComingSoon() {
         }
       }
 
-      // --- Description ---
       let description = $(el).find('div.show-content p').first().text().trim();
       description = truncateText(description, 180);
 
       // --- Poster ---
-      let posterUrl = $(el).find('div.show-poster img').attr('src') || '';
+      let posterUrlRaw = $(el).find('div.show-poster img').attr('src') || '';
+      console.log(`🖼 Raw poster URL for "${title}": ${posterUrlRaw}`);
+
+      let posterUrl = posterUrlRaw;
       if (posterUrl.startsWith('//')) posterUrl = 'https:' + posterUrl;
       else if (posterUrl.startsWith('/')) posterUrl = BASE_URL + posterUrl;
+
+      console.log(`🔗 Normalized poster URL for "${title}": ${posterUrl}`);
 
       const posterFile = path.join(imgDir, `vidiotsPoster${i + 1}.jpg`);
 
@@ -100,15 +110,17 @@ async function scrapeComingSoon() {
       }
     });
 
-    // --- Download posters ---
+    // Download posters
     for (const m of movies) {
       if (m.posterUrl) {
-        console.log(`⬇️ Downloading: ${m.posterUrl}`);
+        console.log(`⬇️ Queueing download for "${m.title}" -> ${m.posterUrl}`);
         await downloadImage(m.posterUrl, m.posterFile);
+      } else {
+        console.log(`⚠️ No poster URL for "${m.title}"`);
       }
     }
 
-    // --- Build HTML ---
+    // Build HTML
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
@@ -144,13 +156,13 @@ async function scrapeComingSoon() {
 </html>`;
 
     fs.writeFileSync('output.html', htmlContent.trim());
-    console.log(`[${new Date().toLocaleString()}] ✅ Output written to output.html`);
+    console.log(`📝 HTML generated: output.html`);
   } catch (err) {
     console.error('❌ Error scraping:', err.message);
   }
 }
 
-// Run at 6 AM and 12 PM
+// Schedule scraping
 cron.schedule('0 6,12 * * *', () => {
   console.log('⏰ Running scheduled scrape...');
   scrapeComingSoon();
