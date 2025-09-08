@@ -24,7 +24,6 @@ async function downloadAndResizeImage(imageUrl, localFile) {
     if (!response.headers['content-type'] || !response.headers['content-type'].startsWith('image')) {
       throw new Error('Not an image content-type: ' + response.headers['content-type']);
     }
-    // Resize to fit within 100x150px
     await sharp(response.data)
       .resize(100, 150, { fit: 'inside', withoutEnlargement: true })
       .toFile(localFile);
@@ -42,7 +41,6 @@ async function scrapeComingSoon() {
 
     const movies = [];
 
-    // For each showtimes-description, find the closest .show-poster-inner BEFORE it (sibling)
     $('div.showtimes-description').slice(0, 6).each((i, el) => {
       const title = $(el).find('h2.show-title a.title').text().trim();
 
@@ -53,7 +51,6 @@ async function scrapeComingSoon() {
         const img = parentShowDetails.find('.show-poster-inner img').attr('src');
         if (img) posterUrl = img;
       }
-
       if (posterUrl) {
         console.log(`🖼 Poster URL for "${title}": ${posterUrl}`);
       }
@@ -61,31 +58,37 @@ async function scrapeComingSoon() {
       // Save in current folder, not images/
       const posterFile = `vidiotsPoster${i + 1}.jpg`;
 
-      // Dates + times
+      // Robust dates + times (all on one line)
       const dateTimePairs = [];
-      $(el).find('ul.datelist li.show-date').each((j, li) => {
-        const dateTxt = $(li).find('span').text().trim();
-        const dateAttr = $(li).attr('data-date');
-        const times = [];
-        $(el).find(`ol.showtimes.showtime-button-row li a.showtime[data-date='${dateAttr}']`).each((k, st) => {
-          const t = $(st).text().trim();
-          if (t) times.push(t);
-        });
-        if (dateTxt) {
-          if (times.length > 0) {
-            dateTimePairs.push(`${dateTxt} (${times.join(', ')})`);
-          } else {
-            dateTimePairs.push(dateTxt);
+      const dateList = $(el).find('ul.datelist li.show-date');
+      if (dateList.length) {
+        dateList.each((j, li) => {
+          const dateTxt = $(li).find('span').text().trim();
+          const dateAttr = $(li).attr('data-date');
+          const times = [];
+          $(el)
+            .find(`ol.showtimes.showtime-button-row li a.showtime[data-date='${dateAttr}']`)
+            .each((k, st) => {
+              const t = $(st).text().trim();
+              if (t) times.push(t);
+            });
+          if (dateTxt) {
+            if (times.length > 0) {
+              dateTimePairs.push(`${dateTxt} (${times.join(', ')})`);
+            } else {
+              dateTimePairs.push(dateTxt);
+            }
           }
-        }
-      });
-      if (dateTimePairs.length === 0) {
+        });
+      } else {
         const dateTxt = $(el).find('div.selected-date.show-datelist.single-date span').text().trim();
         const times = [];
-        $(el).find('ol.showtimes.showtime-button-row li a.showtime').each((j, st) => {
-          const t = $(st).text().trim();
-          if (t) times.push(t);
-        });
+        $(el)
+          .find('ol.showtimes.showtime-button-row li a.showtime')
+          .each((j, st) => {
+            const t = $(st).text().trim();
+            if (t) times.push(t);
+          });
         if (dateTxt) {
           if (times.length > 0) {
             dateTimePairs.push(`${dateTxt} (${times.join(', ')})`);
