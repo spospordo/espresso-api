@@ -58,45 +58,47 @@ async function scrapeComingSoon() {
       // Save in current folder, not images/
       const posterFile = `vidiotsPoster${i + 1}.jpg`;
 
-      // Robust dates + times (all on one line)
-      const dateTimePairs = [];
+      // Robust dates + times grouping (all on one line, joined by 'and')
+      const dateTimeGroups = [];
       const dateList = $(el).find('ul.datelist li.show-date');
       if (dateList.length) {
         dateList.each((j, li) => {
-          const dateTxt = $(li).find('span').text().trim();
+          const dateTxt = $(li).find('span').text().replace(/\s+/g, ' ').replace(' ,', ',').trim();
           const dateAttr = $(li).attr('data-date');
           const times = [];
           $(el)
-            .find(`ol.showtimes.showtime-button-row li a.showtime[data-date='${dateAttr}']`)
+            .find(`ol.showtimes.showtime-button-row a.showtime[data-date='${dateAttr}']`)
             .each((k, st) => {
               const t = $(st).text().trim();
               if (t) times.push(t);
             });
           if (dateTxt) {
             if (times.length > 0) {
-              dateTimePairs.push(`${dateTxt} (${times.join(', ')})`);
+              dateTimeGroups.push(`${dateTxt} - ${times.join(', ')}`);
             } else {
-              dateTimePairs.push(dateTxt);
+              dateTimeGroups.push(dateTxt);
             }
           }
         });
       } else {
-        const dateTxt = $(el).find('div.selected-date.show-datelist.single-date span').text().trim();
+        // Fallback: single date
+        const dateTxt = $(el).find('.selected-date.show-datelist.single-date span').text().replace(/\s+/g, ' ').replace(' ,', ',').trim();
         const times = [];
         $(el)
-          .find('ol.showtimes.showtime-button-row li a.showtime')
+          .find('ol.showtimes.showtime-button-row a.showtime')
           .each((j, st) => {
             const t = $(st).text().trim();
             if (t) times.push(t);
           });
         if (dateTxt) {
           if (times.length > 0) {
-            dateTimePairs.push(`${dateTxt} (${times.join(', ')})`);
+            dateTimeGroups.push(`${dateTxt} - ${times.join(', ')}`);
           } else {
-            dateTimePairs.push(dateTxt);
+            dateTimeGroups.push(dateTxt);
           }
         }
       }
+      const schedule = dateTimeGroups.join(' and ');
 
       // Description
       let description = $(el).find('div.show-content p').first().text().trim();
@@ -113,7 +115,7 @@ async function scrapeComingSoon() {
       if (title) {
         movies.push({
           title,
-          schedule: dateTimePairs.join('; '),
+          schedule,
           description,
           posterUrl,
           posterFile,
