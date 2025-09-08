@@ -12,18 +12,21 @@ function truncateText(text, maxLength = 180) {
   return text.length > maxLength ? text.substring(0, maxLength).trim() + '…' : text;
 }
 
-// Save image with streaming (avoids corruption)
+// --- Save image with streaming ---
 async function downloadImage(imageUrl, localFile) {
   try {
     const writer = fs.createWriteStream(localFile);
     const response = await axios.get(imageUrl, { responseType: 'stream' });
     response.data.pipe(writer);
     return new Promise((resolve, reject) => {
-      writer.on('finish', resolve);
+      writer.on('finish', () => {
+        console.log(`✅ Saved: ${localFile}`);
+        resolve();
+      });
       writer.on('error', reject);
     });
   } catch (err) {
-    console.error(`❌ Failed to download image ${imageUrl}: ${err.message}`);
+    console.error(`❌ Failed to download ${imageUrl}: ${err.message}`);
   }
 }
 
@@ -43,8 +46,8 @@ async function scrapeComingSoon() {
     $('div.showtimes-description').slice(0, 6).each((i, el) => {
       const title = $(el).find('h2.show-title a.title').text().trim();
 
-      // Schedule (dates + times)
-      const schedule = [];
+      // --- Dates + times ---
+      const dateTimePairs = [];
       $(el).find('ul.datelist li.show-date').each((j, li) => {
         const dateTxt = $(li).find('span').text().trim();
         const dateAttr = $(li).attr('data-date');
@@ -54,24 +57,32 @@ async function scrapeComingSoon() {
           if (t) times.push(t);
         });
         if (dateTxt) {
-          schedule.push(`${dateTxt} (${times.join(', ')})`);
+          if (times.length > 0) {
+            dateTimePairs.push(`${dateTxt} (${times.join(', ')})`);
+          } else {
+            dateTimePairs.push(dateTxt);
+          }
         }
       });
-      if (schedule.length === 0) {
+
+      // --- Fallback: single date ---
+      if (dateTimePairs.length === 0) {
         const dateTxt = $(el).find('div.selected-date.show-datelist.single-date span').text().trim();
         const times = [];
         $(el).find('ol.showtimes.showtime-button-row li a.showtime').each((j, st) => {
           const t = $(st).text().trim();
           if (t) times.push(t);
         });
-        if (dateTxt) schedule.push(`${dateTxt} (${times.join(', ')})`);
+        if (dateTxt) {
+          dateTimePairs.push(`${dateTxt} (${times.join(', ')})`);
+        }
       }
 
-      // Description
+      // --- Description ---
       let description = $(el).find('div.show-content p').first().text().trim();
       description = truncateText(description, 180);
 
-      // Poster (normalize URL)
+      // --- Poster ---
       let posterUrl = $(el).find('div.show-poster img').attr('src') || '';
       if (posterUrl.startsWith('//')) posterUrl = 'https:' + posterUrl;
       else if (posterUrl.startsWith('/')) posterUrl = BASE_URL + posterUrl;
@@ -79,19 +90,25 @@ async function scrapeComingSoon() {
       const posterFile = path.join(imgDir, `vidiotsPoster${i + 1}.jpg`);
 
       if (title) {
-        movies.push({ title, schedule: schedule.join('; '), description, posterUrl, posterFile });
+        movies.push({
+          title,
+          schedule: dateTimePairs.join('; '),
+          description,
+          posterUrl,
+          posterFile
+        });
       }
     });
 
-    // Download posters
+    // --- Download posters ---
     for (const m of movies) {
       if (m.posterUrl) {
-        console.log(`⬇️ Downloading poster: ${m.posterUrl}`);
+        console.log(`⬇️ Downloading: ${m.posterUrl}`);
         await downloadImage(m.posterUrl, m.posterFile);
       }
     }
 
-    // Build HTML
+    // --- Build HTML ---
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
