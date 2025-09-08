@@ -25,8 +25,30 @@ function getAbsoluteImageUrl(src) {
   return BASE_URL + '/' + src.replace(/^\/+/, '');
 }
 
+function extractPosterUrl($, el) {
+  // 1. Try to get from background-image style of .show-poster
+  let bgStyle = $(el).find('.show-poster').attr('style') || '';
+  let bgUrlMatch = bgStyle.match(/url\(['"]?(.*?)['"]?\)/i);
+  if (bgUrlMatch && bgUrlMatch[1]) {
+    return getAbsoluteImageUrl(bgUrlMatch[1]);
+  }
+
+  // 2. Try to get from <img> inside .show-poster
+  let imgSrc = $(el).find('.show-poster img').attr('src') || $(el).find('.show-poster img').attr('data-src');
+  if (imgSrc) {
+    return getAbsoluteImageUrl(imgSrc);
+  }
+
+  // 3. Fallback: first <img> in block
+  let fallbackSrc = $(el).find('img').first().attr('src') || $(el).find('img').first().attr('data-src');
+  if (fallbackSrc) {
+    return getAbsoluteImageUrl(fallbackSrc);
+  }
+
+  return '';
+}
+
 async function downloadImage(imageUrl, localFile) {
-  // Try streaming first
   try {
     const response = await axios.get(imageUrl, { responseType: 'stream', headers: HEADERS });
     if (!response.headers['content-type'] || !response.headers['content-type'].startsWith('image')) {
@@ -110,10 +132,11 @@ async function scrapeComingSoon() {
       let description = $(el).find('div.show-content p').first().text().trim();
       description = truncateText(description, 180);
 
-      // Poster (try src, then data-src)
-      let posterUrl = $(el).find('img').first().attr('src') || $(el).find('img').first().attr('data-src') || '';
-      posterUrl = getAbsoluteImageUrl(posterUrl);
-      if (posterUrl) console.log(`🖼 Poster URL for "${title}": ${posterUrl}`);
+      // Poster (robust extraction)
+      let posterUrl = extractPosterUrl($, el);
+      if (posterUrl) {
+        console.log(`🖼 Poster URL for "${title}": ${posterUrl}`);
+      }
 
       const posterFile = path.join(imgDir, `vidiotsPoster${i + 1}.jpg`);
 
