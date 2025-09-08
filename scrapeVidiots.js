@@ -53,18 +53,14 @@ async function scrapeComingSoon() {
       if (posterUrl) {
         console.log(`🖼 Poster URL for "${title}": ${posterUrl}`);
       }
-
-      // Save in current folder, not images/
       const posterFile = `vidiotsPoster${i + 1}.jpg`;
 
       // --- Robust Dates and Times Extraction (no pairing logic) ---
       const uniqueDates = new Set();
-      // All .show-date spans (multi-date)
       parentShowDetails.find('ul.datelist li.show-date span').each((j, span) => {
         const dateTxt = $(span).text().replace(/\s+/g, ' ').replace(' ,', ',').trim();
         if (dateTxt) uniqueDates.add(dateTxt);
       });
-      // Single-date fallback
       parentShowDetails.find('.selected-date.show-datelist.single-date span').each((j, span) => {
         const dateTxt = $(span).text().replace(/\s+/g, ' ').replace(' ,', ',').trim();
         if (dateTxt) uniqueDates.add(dateTxt);
@@ -76,7 +72,6 @@ async function scrapeComingSoon() {
         if (timeTxt) uniqueTimes.add(timeTxt);
       });
 
-      // Format: date1, date2 — time1, time2, time3 (if both present)
       let schedule = '';
       if (uniqueDates.size && uniqueTimes.size) {
         schedule = Array.from(uniqueDates).join(', ') + ' — ' + Array.from(uniqueTimes).join(', ');
@@ -88,14 +83,26 @@ async function scrapeComingSoon() {
 
       // --- Extract director, format, runtime, release year (no labels) ---
       let director = '', format = '', runtime = '', year = '';
-      $(el).find('b').each((_, b) => {
-        const label = $(b).text().trim().replace(':', '').toLowerCase();
-        const val = $(b)[0].nextSibling && $(b)[0].nextSibling.nodeValue
-          ? $(b)[0].nextSibling.nodeValue.trim().replace(/^[:\s]+/, '') : '';
-        if (/director/.test(label)) director = val;
-        if (/format/.test(label)) format = val;
-        if (/run\s*time/.test(label)) runtime = val;
-        if (/release\s*year/.test(label)) year = val;
+      // Find the .show-specs inside the nearest .show-details
+      let showSpecs = parentShowDetails.find('.show-description .show-specs');
+      if (!showSpecs.length) {
+        showSpecs = $(el).find('.show-specs');
+      }
+      showSpecs.find('span').each((_, span) => {
+        const labelSpan = $(span).find('.show-spec-label');
+        if (labelSpan.length) {
+          const label = labelSpan.text().trim().replace(':', '').toLowerCase();
+          // Value: text after the labelSpan
+          let value = '';
+          // Remove the labelSpan from the span, get the remaining text
+          const cloned = $(span).clone();
+          cloned.find('.show-spec-label').remove();
+          value = cloned.text().replace(/^[\s:]+/, '').trim();
+          if (/director/.test(label)) director = value;
+          if (/format/.test(label)) format = value;
+          if (/run\s*time/.test(label)) runtime = value;
+          if (/release\s*year/.test(label)) year = value;
+        }
       });
       const detailsArr = [director, format, runtime, year].filter(Boolean);
       let minidetails = '';
