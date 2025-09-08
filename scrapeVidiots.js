@@ -40,14 +40,13 @@ async function scrapeComingSoon() {
     $('div.showtimes-description').slice(0, 6).each((i, el) => {
       const title = $(el).find('h2.show-title a.title').text().trim();
 
-      const schedule = [];
+      const dateTimePairs = [];
 
-      // --- Multiple or single dates ---
+      // Multiple dates: ul.datelist > li.show-date
       $(el).find('ul.datelist li.show-date').each((j, li) => {
         const dateTxt = $(li).find('span').text().trim();
-        const dateAttr = $(li).attr('data-date'); // unix timestamp-ish string
+        const dateAttr = $(li).attr('data-date');
 
-        // Find times that match this date
         const times = [];
         $(el).find(`ol.showtimes.showtime-button-row li a.showtime[data-date='${dateAttr}']`).each((k, st) => {
           const timeTxt = $(st).text().trim();
@@ -56,15 +55,15 @@ async function scrapeComingSoon() {
 
         if (dateTxt) {
           if (times.length > 0) {
-            schedule.push(`${dateTxt} - ${times.join(', ')}`);
+            dateTimePairs.push(`${dateTxt} (${times.join(', ')})`);
           } else {
-            schedule.push(dateTxt);
+            dateTimePairs.push(dateTxt);
           }
         }
       });
 
-      // --- Fallback: single date with no <ul> ---
-      if (schedule.length === 0) {
+      // Fallback: single date, no ul
+      if (dateTimePairs.length === 0) {
         const dateTxt = $(el).find('div.selected-date.show-datelist.single-date span').text().trim();
         const times = [];
         $(el).find('ol.showtimes.showtime-button-row li a.showtime').each((j, st) => {
@@ -73,18 +72,18 @@ async function scrapeComingSoon() {
         });
         if (dateTxt) {
           if (times.length > 0) {
-            schedule.push(`${dateTxt} - ${times.join(', ')}`);
+            dateTimePairs.push(`${dateTxt} (${times.join(', ')})`);
           } else {
-            schedule.push(dateTxt);
+            dateTimePairs.push(dateTxt);
           }
         }
       }
 
-      // --- Description ---
+      // Description
       let description = $(el).find('div.show-content p').first().text().trim();
       description = truncateText(description, 180);
 
-      // --- Poster ---
+      // Poster
       let posterUrl = $(el).find('div.show-poster img').attr('src') || '';
       if (posterUrl.startsWith('//')) {
         posterUrl = 'https:' + posterUrl;
@@ -94,11 +93,17 @@ async function scrapeComingSoon() {
       const posterFile = path.join(imgDir, `vidiotsPoster${i + 1}.jpg`);
 
       if (title) {
-        movies.push({ title, schedule, description, posterUrl, posterFile });
+        movies.push({
+          title,
+          schedule: dateTimePairs.join('; '), // flatten into one line
+          description,
+          posterUrl,
+          posterFile
+        });
       }
     });
 
-    // Download posters
+    // Download posters locally
     for (const m of movies) {
       if (m.posterUrl) {
         await downloadImage(m.posterUrl, m.posterFile);
@@ -174,9 +179,7 @@ async function scrapeComingSoon() {
       </div>
       <div class="info">
         <div class="title">${m.title}</div>
-        <div class="schedule">
-          ${m.schedule.map(s => `<div>${s}</div>`).join('')}
-        </div>
+        <div class="schedule">${m.schedule}</div>
         <div class="description">${m.description}</div>
       </div>
     </div>
