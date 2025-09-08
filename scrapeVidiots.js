@@ -7,40 +7,59 @@ const cron = require('node-cron');
 const BASE_URL = 'https://vidiotsfoundation.org';
 const url = `${BASE_URL}/coming-soon/`;
 
+const HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36'
+};
+
 function truncateText(text, maxLength = 180) {
   if (!text) return '';
   return text.length > maxLength ? text.substring(0, maxLength).trim() + '…' : text;
 }
 
+function getAbsoluteImageUrl(src) {
+  if (!src) return '';
+  if (src.startsWith('//')) return 'https:' + src;
+  if (src.startsWith('/')) return BASE_URL + src;
+  if (src.startsWith('http')) return src;
+  return BASE_URL + '/' + src.replace(/^\/+/, '');
+}
+
+// Try streaming first, fallback to arraybuffer if we get a non-image
 async function downloadImage(imageUrl, localFile) {
   try {
-    console.log(`➡️  Attempting to download: ${imageUrl}`);
-    const writer = fs.createWriteStream(localFile);
-    const response = await axios.get(imageUrl, { responseType: 'stream' });
-    console.log(`📥 Response status for ${imageUrl}: ${response.status}`);
+    const options = { responseType: 'stream', headers: { ...HEADERS, Referer: url } };
+    const response = await axios.get(imageUrl, options);
 
+    if (!response.headers['content-type'] || !response.headers['content-type'].startsWith('image')) {
+      throw new Error('Not an image content-type: ' + response.headers['content-type']);
+    }
+
+    const writer = fs.createWriteStream(localFile);
     response.data.pipe(writer);
-    return new Promise((resolve, reject) => {
-      writer.on('finish', () => {
-        console.log(`✅ Image saved: ${localFile}`);
-        resolve();
-      });
-      writer.on('error', (err) => {
-        console.error(`❌ Write error for ${localFile}:`, err.message);
-        reject(err);
-      });
+    await new Promise((resolve, reject) => {
+      writer.on('finish', resolve);
+      writer.on('error', reject);
     });
+    console.log(`✅ Image saved: ${localFile}`);
   } catch (err) {
-    console.error(`❌ Download failed for ${imageUrl}: ${err.message}`);
+    // Fallback: try arraybuffer
+    try {
+      const response = await axios.get(imageUrl, { responseType: 'arraybuffer', headers: { ...HEADERS, Referer: url } });
+      if (!response.headers['content-type'] || !response.headers['content-type'].startsWith('image')) {
+        throw new Error('Not an image content-type (fallback): ' + response.headers['content-type']);
+      }
+      fs.writeFileSync(localFile, response.data);
+      console.log(`✅ [Fallback] Image saved: ${localFile}`);
+    } catch (err2) {
+      console.error(`❌ Download failed for ${imageUrl}: ${err2.message}`);
+    }
   }
 }
 
 async function scrapeComingSoon() {
   try {
     console.log(`🌐 Fetching: ${url}`);
-    const { data: html } = await axios.get(url);
-    console.log(`📄 Page downloaded, length=${html.length} chars`);
-
+    const { data: html } = await axios.get(url, { headers: HEADERS });
     const $ = cheerio.load(html);
 
     const movies = [];
@@ -54,7 +73,6 @@ async function scrapeComingSoon() {
 
     $('div.showtimes-description').slice(0, 6).each((i, el) => {
       const title = $(el).find('h2.show-title a.title').text().trim();
-      console.log(`🎬 Movie found: "${title}"`);
 
       // --- Dates + times ---
       const dateTimePairs = [];
@@ -95,12 +113,10 @@ async function scrapeComingSoon() {
       let description = $(el).find('div.show-content p').first().text().trim();
       description = truncateText(description, 180);
 
-      // --- Poster (use first <img> in block) ---
+      // --- Poster (try src, then data-src) ---
       let posterUrl = $(el).find('img').first().attr('src') || '';
-      if (posterUrl.startsWith('//')) posterUrl = 'https:' + posterUrl;
-      else if (posterUrl.startsWith('/')) posterUrl = BASE_URL + posterUrl;
-
-      console.log(`🖼 Poster URL chosen for "${title}": ${posterUrl}`);
+      if (!posterUrl) posterUrl = $(el).find('img').first().attr('data-src') || '';
+      let resolvedPosterUrl = getAbsoluteImageUrl(posterUrl);
 
       const posterFile = path.join(imgDir, `vidiotsPoster${i + 1}.jpg`);
 
@@ -117,7 +133,7 @@ async function scrapeComingSoon() {
           title,
           schedule: dateTimePairs.join('; '),
           description,
-          posterUrl,
+          posterUrl: resolvedPosterUrl,
           posterFile,
           pills
         });
@@ -127,7 +143,7 @@ async function scrapeComingSoon() {
     // --- Download posters ---
     for (const m of movies) {
       if (m.posterUrl) {
-        console.log(`⬇️ Queueing download for "${m.title}" -> ${m.posterUrl}`);
+        console.log(`⬇️ Downloading poster for "${m.title}" -> ${m.posterUrl}`);
         await downloadImage(m.posterUrl, m.posterFile);
       } else {
         console.log(`⚠️ No poster URL for "${m.title}"`);
