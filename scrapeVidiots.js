@@ -17,37 +17,6 @@ function truncateText(text, maxLength = 180) {
   return text.length > maxLength ? text.substring(0, maxLength).trim() + '…' : text;
 }
 
-function getAbsoluteImageUrl(src) {
-  if (!src) return '';
-  if (src.startsWith('//')) return 'https:' + src;
-  if (src.startsWith('/')) return BASE_URL + src;
-  if (src.startsWith('http')) return src;
-  return BASE_URL + '/' + src.replace(/^\/+/, '');
-}
-
-function extractPosterUrl($, el) {
-  // 1. Try to get from background-image style of .show-poster
-  let bgStyle = $(el).find('.show-poster').attr('style') || '';
-  let bgUrlMatch = bgStyle.match(/url\(['"]?(.*?)['"]?\)/i);
-  if (bgUrlMatch && bgUrlMatch[1]) {
-    return getAbsoluteImageUrl(bgUrlMatch[1]);
-  }
-
-  // 2. Try to get from <img> inside .show-poster
-  let imgSrc = $(el).find('.show-poster img').attr('src') || $(el).find('.show-poster img').attr('data-src');
-  if (imgSrc) {
-    return getAbsoluteImageUrl(imgSrc);
-  }
-
-  // 3. Fallback: first <img> in block
-  let fallbackSrc = $(el).find('img').first().attr('src') || $(el).find('img').first().attr('data-src');
-  if (fallbackSrc) {
-    return getAbsoluteImageUrl(fallbackSrc);
-  }
-
-  return '';
-}
-
 async function downloadImage(imageUrl, localFile) {
   try {
     const response = await axios.get(imageUrl, { responseType: 'stream', headers: HEADERS });
@@ -91,8 +60,23 @@ async function scrapeComingSoon() {
       console.log(`📂 Created images folder at: ${imgDir}`);
     }
 
+    // For each showtimes-description, find the closest .show-poster-inner BEFORE it (sibling)
     $('div.showtimes-description').slice(0, 6).each((i, el) => {
       const title = $(el).find('h2.show-title a.title').text().trim();
+
+      // Find poster image: previous .show-details > .show-poster > .show-poster-inner > img
+      let posterUrl = '';
+      let parentShowDetails = $(el).closest('.show-details');
+      if (parentShowDetails.length) {
+        const img = parentShowDetails.find('.show-poster-inner img').attr('src');
+        if (img) posterUrl = img;
+      }
+
+      if (posterUrl) {
+        console.log(`🖼 Poster URL for "${title}": ${posterUrl}`);
+      }
+
+      const posterFile = path.join(imgDir, `vidiotsPoster${i + 1}.jpg`);
 
       // Dates + times
       const dateTimePairs = [];
@@ -131,14 +115,6 @@ async function scrapeComingSoon() {
       // Description
       let description = $(el).find('div.show-content p').first().text().trim();
       description = truncateText(description, 180);
-
-      // Poster (robust extraction)
-      let posterUrl = extractPosterUrl($, el);
-      if (posterUrl) {
-        console.log(`🖼 Poster URL for "${title}": ${posterUrl}`);
-      }
-
-      const posterFile = path.join(imgDir, `vidiotsPoster${i + 1}.jpg`);
 
       // Unique pills
       const pillsSet = new Set();
