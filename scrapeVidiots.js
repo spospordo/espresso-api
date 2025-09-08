@@ -57,7 +57,7 @@ async function scrapeComingSoon() {
       // Save in current folder, not images/
       const posterFile = `vidiotsPoster${i + 1}.jpg`;
 
-      // --- NEW: Robust Dates and Times Extraction (no pairing logic) ---
+      // --- Robust Dates and Times Extraction (no pairing logic) ---
       const uniqueDates = new Set();
       // All .show-date spans (multi-date)
       parentShowDetails.find('ul.datelist li.show-date span').each((j, span) => {
@@ -86,6 +86,21 @@ async function scrapeComingSoon() {
         schedule = Array.from(uniqueTimes).join(', ');
       }
 
+      // --- Extract director, format, runtime, release year (no labels) ---
+      let director = '', format = '', runtime = '', year = '';
+      $(el).find('b').each((_, b) => {
+        const label = $(b).text().trim().replace(':', '').toLowerCase();
+        const val = $(b)[0].nextSibling && $(b)[0].nextSibling.nodeValue
+          ? $(b)[0].nextSibling.nodeValue.trim().replace(/^[:\s]+/, '') : '';
+        if (/director/.test(label)) director = val;
+        if (/format/.test(label)) format = val;
+        if (/run\s*time/.test(label)) runtime = val;
+        if (/release\s*year/.test(label)) year = val;
+      });
+      const detailsArr = [director, format, runtime, year].filter(Boolean);
+      let minidetails = '';
+      if (detailsArr.length) minidetails = `<span class="minidetails">${detailsArr.join(' &middot; ')}</span>`;
+
       // Description
       let description = $(el).find('div.show-content p').first().text().trim();
       description = truncateText(description, 180);
@@ -101,6 +116,7 @@ async function scrapeComingSoon() {
       if (title) {
         movies.push({
           title,
+          minidetails,
           schedule,
           description,
           posterUrl,
@@ -149,6 +165,13 @@ async function scrapeComingSoon() {
   .poster img { width: 100px; height: 150px; object-fit: contain; border: 1px solid #aaa; filter: grayscale(100%); }
   .info { flex: 1; overflow: hidden; }
   .title { font-weight: bold; font-size: 1.05em; margin-bottom: 2px; }
+  .minidetails {
+    font-size: 0.8em;
+    color: #555;
+    font-weight: normal;
+    margin-left: 0.5em;
+    white-space: nowrap;
+  }
   .schedule { font-style: italic; font-size: 0.9em; margin-bottom: 3px; }
   .description { font-size: 0.85em; line-height: 1.2em; }
   .pills { font-size: 0.85em; margin-bottom: 2px; color: #fff; background: #444; border-radius: 8px; padding: 2px 8px; display: inline-block; }
@@ -162,7 +185,7 @@ async function scrapeComingSoon() {
         ${m.posterUrl ? `<img src="${m.posterFile}" alt="${m.title} poster">` : ''}
       </div>
       <div class="info">
-        <div class="title">${m.title}</div>
+        <div class="title">${m.title}${m.minidetails || ''}</div>
         <div class="schedule">${m.schedule}</div>
         ${m.pills && m.pills.length > 0 ? `<div class="pills">${m.pills.join(', ')}</div>` : ''}
         <div class="description">${m.description}</div>
