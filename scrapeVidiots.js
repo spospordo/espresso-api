@@ -105,13 +105,21 @@ async function scrapeComingSoon() {
 
       const posterFile = path.join(imgDir, `vidiotsPoster${i + 1}.jpg`);
 
+      // --- Pills ---
+      const pills = [];
+      $(el).find('.pill-container .pill').each((_, pill) => {
+        const pillText = $(pill).text().trim();
+        if (pillText) pills.push(pillText);
+      });
+
       if (title) {
         movies.push({
           title,
           schedule: dateTimePairs.join('; '),
           description,
           posterUrl,
-          posterFile
+          posterFile,
+          pills
         });
       }
     });
@@ -143,6 +151,7 @@ async function scrapeComingSoon() {
   .title { font-weight: bold; font-size: 1.05em; margin-bottom: 2px; }
   .schedule { font-style: italic; font-size: 0.9em; margin-bottom: 3px; }
   .description { font-size: 0.85em; line-height: 1.2em; }
+  .pills { font-size: 0.85em; margin-bottom: 2px; color: #fff; background: #444; border-radius: 8px; padding: 2px 8px; display: inline-block; }
 </style>
 </head>
 <body>
@@ -156,6 +165,7 @@ async function scrapeComingSoon() {
         <div class="title">${m.title}</div>
         <div class="schedule">${m.schedule}</div>
         <div class="description">${m.description}</div>
+        ${m.pills && m.pills.length > 0 ? `<div class="pills">${m.pills.join(', ')}</div>` : ''}
       </div>
     </div>`).join('')}
 </body>
