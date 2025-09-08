@@ -2,6 +2,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
 const path = require('path');
+const sharp = require('sharp');
 const cron = require('node-cron');
 
 const BASE_URL = 'https://vidiotsfoundation.org';
@@ -17,33 +18,19 @@ function truncateText(text, maxLength = 180) {
   return text.length > maxLength ? text.substring(0, maxLength).trim() + '…' : text;
 }
 
-async function downloadImage(imageUrl, localFile) {
-  try {
-    const response = await axios.get(imageUrl, { responseType: 'stream', headers: HEADERS });
-    if (!response.headers['content-type'] || !response.headers['content-type'].startsWith('image')) {
-      throw new Error('Not an image content-type: ' + response.headers['content-type']);
-    }
-    const writer = fs.createWriteStream(localFile);
-    response.data.pipe(writer);
-    await new Promise((resolve, reject) => {
-      writer.on('finish', resolve);
-      writer.on('error', reject);
-    });
-    console.log(`✅ Image saved: ${localFile}`);
-    return;
-  } catch (err) {
-    console.log(`⚠️ Stream failed for ${imageUrl}. Retrying as arraybuffer...`);
-  }
-  // Fallback to arraybuffer
+async function downloadAndResizeImage(imageUrl, localFile) {
   try {
     const response = await axios.get(imageUrl, { responseType: 'arraybuffer', headers: HEADERS });
     if (!response.headers['content-type'] || !response.headers['content-type'].startsWith('image')) {
-      throw new Error('Not an image content-type (fallback): ' + response.headers['content-type']);
+      throw new Error('Not an image content-type: ' + response.headers['content-type']);
     }
-    fs.writeFileSync(localFile, response.data);
-    console.log(`✅ [Fallback] Image saved: ${localFile}`);
-  } catch (err2) {
-    console.error(`❌ Download failed for ${imageUrl}: ${err2.message}`);
+    // Resize to fit within 100x150px
+    await sharp(response.data)
+      .resize(100, 150, { fit: 'inside', withoutEnlargement: true })
+      .toFile(localFile);
+    console.log(`✅ Image saved and resized: ${localFile}`);
+  } catch (err) {
+    console.error(`❌ Download/resize failed for ${imageUrl}: ${err.message}`);
   }
 }
 
@@ -54,11 +41,6 @@ async function scrapeComingSoon() {
     const $ = cheerio.load(html);
 
     const movies = [];
-    const imgDir = path.join(__dirname, 'images');
-    if (!fs.existsSync(imgDir)) {
-      fs.mkdirSync(imgDir);
-      console.log(`📂 Created images folder at: ${imgDir}`);
-    }
 
     // For each showtimes-description, find the closest .show-poster-inner BEFORE it (sibling)
     $('div.showtimes-description').slice(0, 6).each((i, el) => {
@@ -76,7 +58,8 @@ async function scrapeComingSoon() {
         console.log(`🖼 Poster URL for "${title}": ${posterUrl}`);
       }
 
-      const posterFile = path.join(imgDir, `vidiotsPoster${i + 1}.jpg`);
+      // Save in current folder, not images/
+      const posterFile = `vidiotsPoster${i + 1}.jpg`;
 
       // Dates + times
       const dateTimePairs = [];
@@ -136,11 +119,11 @@ async function scrapeComingSoon() {
       }
     });
 
-    // Download posters
+    // Download and resize posters
     for (const m of movies) {
       if (m.posterUrl) {
         console.log(`⬇️ Downloading poster for "${m.title}" -> ${m.posterUrl}`);
-        await downloadImage(m.posterUrl, m.posterFile);
+        await downloadAndResizeImage(m.posterUrl, m.posterFile);
       } else {
         console.log(`⚠️ No poster URL for "${m.title}"`);
       }
@@ -154,11 +137,25 @@ async function scrapeComingSoon() {
 <meta charset="UTF-8">
 <title>Coming Soon — Vidiots</title>
 <style>
-  body { width: 800px; height: 480px; margin: 0; padding: 10px; background: #fff; color: #000; font-family: sans-serif; overflow: hidden; }
+  html, body {
+    width: 800px;
+    height: 480px;
+    max-width: 800px;
+    max-height: 480px;
+    min-width: 800px;
+    min-height: 480px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #fff;
+    color: #000;
+    font-family: sans-serif;
+  }
+  body { padding: 10px; box-sizing: border-box; }
   h1 { text-align: center; font-size: 1.4em; margin: 0 0 8px; }
   .movie { display: flex; flex-direction: row; align-items: flex-start; margin-bottom: 8px; }
   .poster { flex: 0 0 100px; margin-right: 8px; }
-  .poster img { width: 100px; height: 150px; object-fit: cover; border: 1px solid #aaa; filter: grayscale(100%); }
+  .poster img { width: 100px; height: 150px; object-fit: contain; border: 1px solid #aaa; filter: grayscale(100%); }
   .info { flex: 1; overflow: hidden; }
   .title { font-weight: bold; font-size: 1.05em; margin-bottom: 2px; }
   .schedule { font-style: italic; font-size: 0.9em; margin-bottom: 3px; }
@@ -171,7 +168,7 @@ async function scrapeComingSoon() {
   ${movies.map(m => `
     <div class="movie">
       <div class="poster">
-        ${m.posterUrl ? `<img src="images/${path.basename(m.posterFile)}" alt="${m.title} poster">` : ''}
+        ${m.posterUrl ? `<img src="${m.posterFile}" alt="${m.title} poster">` : ''}
       </div>
       <div class="info">
         <div class="title">${m.title}</div>
