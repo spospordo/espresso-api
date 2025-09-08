@@ -57,37 +57,31 @@ async function scrapeComingSoon() {
       // Save in current folder, not images/
       const posterFile = `vidiotsPoster${i + 1}.jpg`;
 
-      // --- Robust Date + Times Extraction: USE PARENT FOR EVERYTHING ---
+      // --- Dates and Times Extraction (bulletproof) ---
       const dateTimeGroups = [];
-      const dateList = parentShowDetails.find('ul.datelist li.show-date');
-      if (dateList.length) {
-        dateList.each((j, li) => {
-          const dateTxt = $(li).find('span').text().replace(/\s+/g, ' ').replace(' ,', ',').trim();
+      parentShowDetails.find('ul.datelist li.show-date').each((j, li) => {
           const dateAttr = $(li).attr('data-date');
+          const dateTxt = $(li).find('span').text().replace(/\s+/g, ' ').replace(' ,', ',').trim();
           const times = [];
-          parentShowDetails
-            .find(`ol.showtimes.showtime-button-row a.showtime[data-date='${dateAttr}']`)
-            .each((k, st) => {
-              const t = $(st).text().trim();
-              if (t) times.push(t);
-            });
-          if (dateTxt && times.length > 0) {
-            dateTimeGroups.push(`${dateTxt} - ${times.join(', ')}`);
-          }
-        });
-      } else {
-        // Single date fallback
-        const dateTxt = parentShowDetails.find('.selected-date.show-datelist.single-date span').text().replace(/\s+/g, ' ').replace(' ,', ',').trim();
-        const times = [];
-        parentShowDetails
-          .find('ol.showtimes.showtime-button-row a.showtime')
-          .each((j, st) => {
-            const t = $(st).text().trim();
-            if (t) times.push(t);
+          parentShowDetails.find(`ol.showtimes.showtime-button-row a.showtime[data-date='${dateAttr}']`).each((k, a) => {
+              const timeTxt = $(a).text().trim();
+              if (timeTxt) times.push(timeTxt);
           });
-        if (dateTxt && times.length > 0) {
-          dateTimeGroups.push(`${dateTxt} - ${times.join(', ')}`);
-        }
+          if (dateTxt && times.length > 0) {
+              dateTimeGroups.push(`${dateTxt} - ${times.join(', ')}`);
+          }
+      });
+      // Fallback: single date (when datelist is not present)
+      if (dateTimeGroups.length === 0) {
+          const dateTxt = parentShowDetails.find('.selected-date.show-datelist.single-date span').text().replace(/\s+/g, ' ').replace(' ,', ',').trim();
+          const times = [];
+          parentShowDetails.find('ol.showtimes.showtime-button-row a.showtime').each((k, a) => {
+              const timeTxt = $(a).text().trim();
+              if (timeTxt) times.push(timeTxt);
+          });
+          if (dateTxt && times.length > 0) {
+              dateTimeGroups.push(`${dateTxt} - ${times.join(', ')}`);
+          }
       }
       const schedule = dateTimeGroups.join(' and ');
 
