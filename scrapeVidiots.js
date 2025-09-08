@@ -12,7 +12,7 @@ function truncateText(text, maxLength = 180) {
   return text.length > maxLength ? text.substring(0, maxLength).trim() + '…' : text;
 }
 
-// --- Save image with extra debug logging ---
+// --- Save image with debug logging ---
 async function downloadImage(imageUrl, localFile) {
   try {
     console.log(`➡️  Attempting to download: ${imageUrl}`);
@@ -87,15 +87,23 @@ async function scrapeComingSoon() {
       let description = $(el).find('div.show-content p').first().text().trim();
       description = truncateText(description, 180);
 
-      // --- Poster ---
-      let posterUrlRaw = $(el).find('div.show-poster img').attr('src') || '';
-      console.log(`🖼 Raw poster URL for "${title}": ${posterUrlRaw}`);
+      // --- Poster Debug ---
+      console.log(`🔎 Looking for poster <img> tags for "${title}"...`);
+      $(el).find('img').each((idx, img) => {
+        const attribs = $(img).attr();
+        console.log(`   🔍 Img tag #${idx}:`, attribs);
+      });
 
-      let posterUrl = posterUrlRaw;
+      // Try grabbing src/data-src/data-lazy-src
+      let posterUrl =
+        $(el).find('div.show-poster img').attr('src') ||
+        $(el).find('div.show-poster img').attr('data-src') ||
+        $(el).find('div.show-poster img').attr('data-lazy-src') || '';
+
       if (posterUrl.startsWith('//')) posterUrl = 'https:' + posterUrl;
       else if (posterUrl.startsWith('/')) posterUrl = BASE_URL + posterUrl;
 
-      console.log(`🔗 Normalized poster URL for "${title}": ${posterUrl}`);
+      console.log(`🖼 Poster URL chosen for "${title}": ${posterUrl}`);
 
       const posterFile = path.join(imgDir, `vidiotsPoster${i + 1}.jpg`);
 
