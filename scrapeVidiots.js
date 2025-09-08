@@ -207,6 +207,9 @@ async function scrapeComingSoon() {
     console.error('❌ Error scraping:', err.message);
   }
 }
+// call git upload
+import { schedulePush } from './uploadToGitHub.mjs';
+schedulePush("Automated Commit and push from server.js project");
 
 // Schedule scraping
 cron.schedule('0 6,12 * * *', () => {
@@ -216,4 +219,5 @@ cron.schedule('0 6,12 * * *', () => {
 
 // Run immediately
 scrapeComingSoon();
+
 
