@@ -8,7 +8,8 @@ const BASE_URL = 'https://vidiotsfoundation.org';
 const url = `${BASE_URL}/coming-soon/`;
 
 const HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36'
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36',
+  'Referer': BASE_URL
 };
 
 function truncateText(text, maxLength = 180) {
@@ -24,16 +25,13 @@ function getAbsoluteImageUrl(src) {
   return BASE_URL + '/' + src.replace(/^\/+/, '');
 }
 
-// Try streaming first, fallback to arraybuffer if we get a non-image
 async function downloadImage(imageUrl, localFile) {
+  // Try streaming first
   try {
-    const options = { responseType: 'stream', headers: { ...HEADERS, Referer: url } };
-    const response = await axios.get(imageUrl, options);
-
+    const response = await axios.get(imageUrl, { responseType: 'stream', headers: HEADERS });
     if (!response.headers['content-type'] || !response.headers['content-type'].startsWith('image')) {
       throw new Error('Not an image content-type: ' + response.headers['content-type']);
     }
-
     const writer = fs.createWriteStream(localFile);
     response.data.pipe(writer);
     await new Promise((resolve, reject) => {
@@ -41,18 +39,20 @@ async function downloadImage(imageUrl, localFile) {
       writer.on('error', reject);
     });
     console.log(`✅ Image saved: ${localFile}`);
+    return;
   } catch (err) {
-    // Fallback: try arraybuffer
-    try {
-      const response = await axios.get(imageUrl, { responseType: 'arraybuffer', headers: { ...HEADERS, Referer: url } });
-      if (!response.headers['content-type'] || !response.headers['content-type'].startsWith('image')) {
-        throw new Error('Not an image content-type (fallback): ' + response.headers['content-type']);
-      }
-      fs.writeFileSync(localFile, response.data);
-      console.log(`✅ [Fallback] Image saved: ${localFile}`);
-    } catch (err2) {
-      console.error(`❌ Download failed for ${imageUrl}: ${err2.message}`);
+    console.log(`⚠️ Stream failed for ${imageUrl}. Retrying as arraybuffer...`);
+  }
+  // Fallback to arraybuffer
+  try {
+    const response = await axios.get(imageUrl, { responseType: 'arraybuffer', headers: HEADERS });
+    if (!response.headers['content-type'] || !response.headers['content-type'].startsWith('image')) {
+      throw new Error('Not an image content-type (fallback): ' + response.headers['content-type']);
     }
+    fs.writeFileSync(localFile, response.data);
+    console.log(`✅ [Fallback] Image saved: ${localFile}`);
+  } catch (err2) {
+    console.error(`❌ Download failed for ${imageUrl}: ${err2.message}`);
   }
 }
 
@@ -63,8 +63,6 @@ async function scrapeComingSoon() {
     const $ = cheerio.load(html);
 
     const movies = [];
-
-    // Ensure images folder exists
     const imgDir = path.join(__dirname, 'images');
     if (!fs.existsSync(imgDir)) {
       fs.mkdirSync(imgDir);
@@ -74,7 +72,7 @@ async function scrapeComingSoon() {
     $('div.showtimes-description').slice(0, 6).each((i, el) => {
       const title = $(el).find('h2.show-title a.title').text().trim();
 
-      // --- Dates + times ---
+      // Dates + times
       const dateTimePairs = [];
       $(el).find('ul.datelist li.show-date').each((j, li) => {
         const dateTxt = $(li).find('span').text().trim();
@@ -92,7 +90,6 @@ async function scrapeComingSoon() {
           }
         }
       });
-
       if (dateTimePairs.length === 0) {
         const dateTxt = $(el).find('div.selected-date.show-datelist.single-date span').text().trim();
         const times = [];
@@ -109,18 +106,18 @@ async function scrapeComingSoon() {
         }
       }
 
-      // --- Description ---
+      // Description
       let description = $(el).find('div.show-content p').first().text().trim();
       description = truncateText(description, 180);
 
-      // --- Poster (try src, then data-src) ---
-      let posterUrl = $(el).find('img').first().attr('src') || '';
-      if (!posterUrl) posterUrl = $(el).find('img').first().attr('data-src') || '';
-      let resolvedPosterUrl = getAbsoluteImageUrl(posterUrl);
+      // Poster (try src, then data-src)
+      let posterUrl = $(el).find('img').first().attr('src') || $(el).find('img').first().attr('data-src') || '';
+      posterUrl = getAbsoluteImageUrl(posterUrl);
+      if (posterUrl) console.log(`🖼 Poster URL for "${title}": ${posterUrl}`);
 
       const posterFile = path.join(imgDir, `vidiotsPoster${i + 1}.jpg`);
 
-      // --- Pills (unique only) ---
+      // Unique pills
       const pillsSet = new Set();
       $(el).find('.pill-container .pill').each((_, pill) => {
         const pillText = $(pill).text().trim();
@@ -133,14 +130,14 @@ async function scrapeComingSoon() {
           title,
           schedule: dateTimePairs.join('; '),
           description,
-          posterUrl: resolvedPosterUrl,
+          posterUrl,
           posterFile,
           pills
         });
       }
     });
 
-    // --- Download posters ---
+    // Download posters
     for (const m of movies) {
       if (m.posterUrl) {
         console.log(`⬇️ Downloading poster for "${m.title}" -> ${m.posterUrl}`);
@@ -150,7 +147,7 @@ async function scrapeComingSoon() {
       }
     }
 
-    // --- Build HTML ---
+    // Build HTML
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
