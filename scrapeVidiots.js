@@ -57,7 +57,7 @@ async function scrapeComingSoon() {
       const title = $(el).find('h2.show-title a.title').text().trim();
       console.log(`🎬 Movie found: "${title}"`);
 
-      // Dates + times
+      // --- Dates + times ---
       const dateTimePairs = [];
       $(el).find('ul.datelist li.show-date').each((j, li) => {
         const dateTxt = $(li).find('span').text().trim();
@@ -68,7 +68,11 @@ async function scrapeComingSoon() {
           if (t) times.push(t);
         });
         if (dateTxt) {
-          dateTimePairs.push(`${dateTxt} (${times.join(', ')})`);
+          if (times.length > 0) {
+            dateTimePairs.push(`${dateTxt} (${times.join(', ')})`);
+          } else {
+            dateTimePairs.push(dateTxt);
+          }
         }
       });
 
@@ -80,26 +84,20 @@ async function scrapeComingSoon() {
           if (t) times.push(t);
         });
         if (dateTxt) {
-          dateTimePairs.push(`${dateTxt} (${times.join(', ')})`);
+          if (times.length > 0) {
+            dateTimePairs.push(`${dateTxt} (${times.join(', ')})`);
+          } else {
+            dateTimePairs.push(dateTxt);
+          }
         }
       }
 
+      // --- Description ---
       let description = $(el).find('div.show-content p').first().text().trim();
       description = truncateText(description, 180);
 
-      // --- Poster Debug ---
-      console.log(`🔎 Looking for poster <img> tags for "${title}"...`);
-      $(el).find('img').each((idx, img) => {
-        const attribs = $(img).attr();
-        console.log(`   🔍 Img tag #${idx}:`, attribs);
-      });
-
-      // Try grabbing src/data-src/data-lazy-src
-      let posterUrl =
-        $(el).find('div.show-poster img').attr('src') ||
-        $(el).find('div.show-poster img').attr('data-src') ||
-        $(el).find('div.show-poster img').attr('data-lazy-src') || '';
-
+      // --- Poster (use first <img> in block) ---
+      let posterUrl = $(el).find('img').first().attr('src') || '';
       if (posterUrl.startsWith('//')) posterUrl = 'https:' + posterUrl;
       else if (posterUrl.startsWith('/')) posterUrl = BASE_URL + posterUrl;
 
@@ -118,7 +116,7 @@ async function scrapeComingSoon() {
       }
     });
 
-    // Download posters
+    // --- Download posters ---
     for (const m of movies) {
       if (m.posterUrl) {
         console.log(`⬇️ Queueing download for "${m.title}" -> ${m.posterUrl}`);
@@ -128,7 +126,7 @@ async function scrapeComingSoon() {
       }
     }
 
-    // Build HTML
+    // --- Build HTML ---
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
@@ -163,8 +161,8 @@ async function scrapeComingSoon() {
 </body>
 </html>`;
 
-    fs.writeFileSync('output.html', htmlContent.trim());
-    console.log(`📝 HTML generated: output.html`);
+    fs.writeFileSync('outputScrapeVidiots.html', htmlContent.trim());
+    console.log(`📝 HTML generated: outputScrapeVidiots.html`);
   } catch (err) {
     console.error('❌ Error scraping:', err.message);
   }
