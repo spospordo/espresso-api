@@ -168,8 +168,8 @@ async function scrapeComingSoon() {
   body { padding: 10px; box-sizing: border-box; }
   h1 { text-align: center; font-size: 1.4em; margin: 0 0 8px; }
   .movie { display: flex; flex-direction: row; align-items: flex-start; margin-bottom: 8px; }
-  .poster { flex: 0 0 100px; margin-right: 8px; }
-  .poster img { width: 100px; height: 150px; object-fit: contain; border: 1px solid #aaa; filter: grayscale(100%); }
+  .poster { flex: 0 0 50px; margin-right: 8px; }
+  .poster img { height: 75px; object-fit: contain; border: 1px solid #aaa; filter: grayscale(100%); }
   .info { flex: 1; overflow: hidden; }
   .title { font-weight: bold; font-size: 1.05em; margin-bottom: 2px; }
   .minidetails {
@@ -216,3 +216,4 @@ cron.schedule('0 6,12 * * *', () => {
 
 // Run immediately
 scrapeComingSoon();
+
