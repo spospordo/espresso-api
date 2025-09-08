@@ -13,41 +13,41 @@ module.exports = {
     remoteOutputPath: '/your-folder/output.jpeg',  // The remote FTP path where the file will be uploaded
   },
   htmlConfig: {
-    originalHTMLPath: '/your-folder/index.html',  // Path to the original HTML file or leave blank to skip generating HTML file
-    outputHTMLPath: '/your-folder/output.html',   // Path where the rendered HTML will be saved
-    serverURL: 'http://<server IP>:3000/get-text',  // Server's URL to fetch the dynamic text values
-        imagePaths: {
-            smallcontainer: 'https://<githubUsername>.github.io/TRMNL/smallContainer.png',
-            mediumcontainer: 'https://<githubUsername>.github.io/TRMNL/mediumContainer.png',
-            largecontainer: 'https://<githubUsername>.github.io/TRMNL/largeContainer.png'
-   }
+    originalHTMLPath: '/your-folder/index.html',
+    outputHTMLPath: '/your-folder/output.html',
+    serverURL: 'http://<server IP>:3000/get-text',
+    imagePaths: {
+      smallcontainer: 'https://<githubUsername>.github.io/TRMNL/smallContainer.png',
+      mediumcontainer: 'https://<githubUsername>.github.io/TRMNL/mediumContainer.png',
+      largecontainer: 'https://<githubUsername>.github.io/TRMNL/largeContainer.png'
+    }
   },
   serverConfig: {
-    port: 3000,  // Port on which the server will listen
-    staticFilesDirectory: '/yourfolder/folder',  // Path to serve static files
-    textFilePath: '/home/<username or folder>/espresso-api/textValues.json'  // Path to the JSON file with text values
+    port: 3000,
+    staticFilesDirectory: '/yourfolder/folder',
+    textFilePath: '/home/<username or folder>/espresso-api/textValues.json'
   },
-    github: {
-        username: 'username',  // Replace with your GitHub username or leave value blank to skip GitHub push
-        token: 'tokenText',        // Replace with your GitHub personal access token
-        repo: '<username>.github.io',       // Your GitHub Pages repository name
-        branch: 'main',                    // Branch for GitHub Pages, usually 'main'
-    },
-   file: {
-  filesToUpload: [
-    {
-      sourceFile: '/yourFolder/output.html',
-      destinationPath: 'foldername/output.html'
-    },
-    {
-      sourceFile: '/yourFolder/output.jpeg',
-      destinationPath: 'foldername/output.jpeg'
-    },
-    {
-      sourceFile: '/yourFolder/logs.txt',
-      destinationPath: 'foldername/logs.txt'
-    }
-  ]
+  github: {
+    username: 'username',
+    token: 'tokenText',
+    repo: '<username>.github.io',
+    branch: 'main',
+    repoLocalPath: '/absolute/path/to/your/repo', // <-- NEW: Local repo path for git CLI commands
+  },
+  file: {
+    filesToUpload: [
+      {
+        sourceFile: '/yourFolder/output.html',
+        destinationPath: 'foldername/output.html'
+      },
+      {
+        sourceFile: '/yourFolder/output.jpeg',
+        destinationPath: 'foldername/output.jpeg'
+      },
+      {
+        sourceFile: '/yourFolder/logs.txt',
+        destinationPath: 'foldername/logs.txt'
+      }
+    ]
+  }
 }
-
-};
