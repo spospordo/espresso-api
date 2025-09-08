@@ -1,7 +1,6 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
-const path = require('path');
 const sharp = require('sharp');
 const cron = require('node-cron');
 
@@ -58,48 +57,40 @@ async function scrapeComingSoon() {
       // Save in current folder, not images/
       const posterFile = `vidiotsPoster${i + 1}.jpg`;
 
-// Robust dates + times grouping (all on one line, joined by 'and')
-const dateTimeGroups = [];
-const dateList = parentShowDetails.find('ul.datelist li.show-date');
-if (dateList.length) {
-  dateList.each((j, li) => {
-    const dateTxt = $(li).find('span').text().replace(/\s+/g, ' ').replace(' ,', ',').trim();
-    const dateAttr = $(li).attr('data-date');
-    const times = [];
-    parentShowDetails
-      .find(`ol.showtimes.showtime-button-row a.showtime[data-date='${dateAttr}']`)
-      .each((k, st) => {
-        const t = $(st).text().trim();
-        if (t) times.push(t);
-      });
-    if (dateTxt) {
-      if (times.length > 0) {
-        dateTimeGroups.push(`${dateTxt} - ${times.join(', ')}`);
+      // --- Robust Date + Times Extraction: USE PARENT FOR EVERYTHING ---
+      const dateTimeGroups = [];
+      const dateList = parentShowDetails.find('ul.datelist li.show-date');
+      if (dateList.length) {
+        dateList.each((j, li) => {
+          const dateTxt = $(li).find('span').text().replace(/\s+/g, ' ').replace(' ,', ',').trim();
+          const dateAttr = $(li).attr('data-date');
+          const times = [];
+          parentShowDetails
+            .find(`ol.showtimes.showtime-button-row a.showtime[data-date='${dateAttr}']`)
+            .each((k, st) => {
+              const t = $(st).text().trim();
+              if (t) times.push(t);
+            });
+          if (dateTxt && times.length > 0) {
+            dateTimeGroups.push(`${dateTxt} - ${times.join(', ')}`);
+          }
+        });
       } else {
-        dateTimeGroups.push(dateTxt);
+        // Single date fallback
+        const dateTxt = parentShowDetails.find('.selected-date.show-datelist.single-date span').text().replace(/\s+/g, ' ').replace(' ,', ',').trim();
+        const times = [];
+        parentShowDetails
+          .find('ol.showtimes.showtime-button-row a.showtime')
+          .each((j, st) => {
+            const t = $(st).text().trim();
+            if (t) times.push(t);
+          });
+        if (dateTxt && times.length > 0) {
+          dateTimeGroups.push(`${dateTxt} - ${times.join(', ')}`);
+        }
       }
-    }
-  });
-} else {
-  // Fallback: single date
-  const dateTxt = parentShowDetails.find('.selected-date.show-datelist.single-date span').text().replace(/\s+/g, ' ').replace(' ,', ',').trim();
-  const times = [];
-  parentShowDetails
-    .find('ol.showtimes.showtime-button-row a.showtime')
-    .each((j, st) => {
-      const t = $(st).text().trim();
-      if (t) times.push(t);
-    });
-  if (dateTxt) {
-    if (times.length > 0) {
-      dateTimeGroups.push(`${dateTxt} - ${times.join(', ')}`);
-    } else {
-      dateTimeGroups.push(dateTxt);
-    }
-  }
-}
-const schedule = dateTimeGroups.join(' and ');
-      
+      const schedule = dateTimeGroups.join(' and ');
+
       // Description
       let description = $(el).find('div.show-content p').first().text().trim();
       description = truncateText(description, 180);
@@ -200,5 +191,3 @@ cron.schedule('0 6,12 * * *', () => {
 
 // Run immediately
 scrapeComingSoon();
-
-
