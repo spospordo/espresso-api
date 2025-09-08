@@ -40,27 +40,45 @@ async function scrapeComingSoon() {
     $('div.showtimes-description').slice(0, 6).each((i, el) => {
       const title = $(el).find('h2.show-title a.title').text().trim();
 
-      // --- Extract dates ---
-      const dates = [];
-      // Case 1: multiple dates inside ul > li > span
-      $(el).find('div.selected-date.show-datelist ul li span').each((j, span) => {
-        const dateTxt = $(span).text().trim();
-        if (dateTxt) dates.push(dateTxt);
-      });
-      // Case 2: single-date version (no ul)
-      if (dates.length === 0) {
-        $(el).find('div.selected-date.show-datelist.single-date span').each((j, span) => {
-          const dateTxt = $(span).text().trim();
-          if (dateTxt) dates.push(dateTxt);
-        });
-      }
+      const schedule = [];
 
-      // --- Extract times ---
-      const times = [];
-      $(el).find('ol.showtimes.showtime-button-row li a.showtime').each((j, st) => {
-        const txt = $(st).text().trim();
-        if (txt) times.push(txt);
+      // --- Multiple or single dates ---
+      $(el).find('ul.datelist li.show-date').each((j, li) => {
+        const dateTxt = $(li).find('span').text().trim();
+        const dateAttr = $(li).attr('data-date'); // unix timestamp-ish string
+
+        // Find times that match this date
+        const times = [];
+        $(el).find(`ol.showtimes.showtime-button-row li a.showtime[data-date='${dateAttr}']`).each((k, st) => {
+          const timeTxt = $(st).text().trim();
+          if (timeTxt) times.push(timeTxt);
+        });
+
+        if (dateTxt) {
+          if (times.length > 0) {
+            schedule.push(`${dateTxt} - ${times.join(', ')}`);
+          } else {
+            schedule.push(dateTxt);
+          }
+        }
       });
+
+      // --- Fallback: single date with no <ul> ---
+      if (schedule.length === 0) {
+        const dateTxt = $(el).find('div.selected-date.show-datelist.single-date span').text().trim();
+        const times = [];
+        $(el).find('ol.showtimes.showtime-button-row li a.showtime').each((j, st) => {
+          const t = $(st).text().trim();
+          if (t) times.push(t);
+        });
+        if (dateTxt) {
+          if (times.length > 0) {
+            schedule.push(`${dateTxt} - ${times.join(', ')}`);
+          } else {
+            schedule.push(dateTxt);
+          }
+        }
+      }
 
       // --- Description ---
       let description = $(el).find('div.show-content p').first().text().trim();
@@ -76,7 +94,7 @@ async function scrapeComingSoon() {
       const posterFile = path.join(imgDir, `vidiotsPoster${i + 1}.jpg`);
 
       if (title) {
-        movies.push({ title, dates, times, description, posterUrl, posterFile });
+        movies.push({ title, schedule, description, posterUrl, posterFile });
       }
     });
 
@@ -157,7 +175,7 @@ async function scrapeComingSoon() {
       <div class="info">
         <div class="title">${m.title}</div>
         <div class="schedule">
-          ${m.dates.length > 0 ? m.dates.join(', ') : ''}${m.times.length > 0 ? ' — ' + m.times.join(', ') : ''}
+          ${m.schedule.map(s => `<div>${s}</div>`).join('')}
         </div>
         <div class="description">${m.description}</div>
       </div>
