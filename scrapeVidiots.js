@@ -12,7 +12,6 @@ function truncateText(text, maxLength = 180) {
   return text.length > maxLength ? text.substring(0, maxLength).trim() + '…' : text;
 }
 
-// --- Save image with debug logging ---
 async function downloadImage(imageUrl, localFile) {
   try {
     console.log(`➡️  Attempting to download: ${imageUrl}`);
@@ -105,12 +104,13 @@ async function scrapeComingSoon() {
 
       const posterFile = path.join(imgDir, `vidiotsPoster${i + 1}.jpg`);
 
-      // --- Pills ---
-      const pills = [];
+      // --- Pills (unique only) ---
+      const pillsSet = new Set();
       $(el).find('.pill-container .pill').each((_, pill) => {
         const pillText = $(pill).text().trim();
-        if (pillText) pills.push(pillText);
+        if (pillText) pillsSet.add(pillText);
       });
+      const pills = Array.from(pillsSet);
 
       if (title) {
         movies.push({
@@ -164,8 +164,8 @@ async function scrapeComingSoon() {
       <div class="info">
         <div class="title">${m.title}</div>
         <div class="schedule">${m.schedule}</div>
-        <div class="description">${m.description}</div>
         ${m.pills && m.pills.length > 0 ? `<div class="pills">${m.pills.join(', ')}</div>` : ''}
+        <div class="description">${m.description}</div>
       </div>
     </div>`).join('')}
 </body>
