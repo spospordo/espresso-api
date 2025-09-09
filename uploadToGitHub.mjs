@@ -1,7 +1,7 @@
 import { spawnSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import config from './config.js';
+import config from './config.cjs';
 const { github } = config;
 
 // Get __dirname in ES modules
