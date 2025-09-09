@@ -1,5 +1,5 @@
 const ftp = require('basic-ftp');
-const { ftpConfig, fileConfig } = require('./config.cjs'); // Import FTP and file configuration from config.js
+const { ftp: ftpConfig } = require('./config.cjs'); // Import FTP configuration from config.js
 const fs = require('fs');  // Import fs module to check file existence
 
 async function uploadToFTP() {
@@ -22,7 +22,7 @@ async function uploadToFTP() {
     console.log('FTP connection established.');
 
     // Get the local file path from config.js
-    const localFilePath = fileConfig.localFilePathFTP;
+    const localFilePath = ftpConfig.localFilePath;
     
     // Check if the local file exists before attempting to upload
     if (!localFilePath || !fs.existsSync(localFilePath)) {
@@ -34,7 +34,7 @@ async function uploadToFTP() {
     console.log(`Uploading ${localFilePath} to FTP server...`);
 
     // Upload the file to the remote FTP server using the remote path from config.js
-    await client.uploadFrom(localFilePath, fileConfig.remoteOutputPath); // Remote path from config.js
+    await client.uploadFrom(localFilePath, ftpConfig.remoteOutputPath); // Remote path from config.js
     console.log('File uploaded successfully!');
   } catch (error) {
     console.error('Error uploading file to FTP:', error);

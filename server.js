@@ -6,7 +6,7 @@ import { exec } from 'child_process';
 // Import CommonJS config.js with compatibility for ESM
 import * as configModule from './config.cjs';
 const config = configModule.default ?? configModule;
-const { serverConfig, htmlConfig, fileConfig, ftpConfig, github } = config;
+const { server, htmlGeneration, conversion, ftp, github } = config;
 
 // Dynamically import the schedulePush function for debounced git pushes
 let schedulePush;
@@ -22,8 +22,8 @@ let schedulePush;
 const app = express();
 
 app.use(cors());
-app.use(express.static(serverConfig.staticFilesDirectory));
-const textFilePath = serverConfig.textFilePath;
+app.use(express.static(server.staticFilesDirectory));
+const textFilePath = server.textFilePath;
 let textValues = {};
 
 function loadTextValues() {
@@ -66,7 +66,7 @@ app.post('/update-texts', express.json(), (req, res) => {
 
     // Run generateHTML.cjs first
     setTimeout(() => {
-        if (!htmlConfig.originalHTMLPath) {
+        if (!htmlGeneration.originalHTMLPath) {
             console.log("Skipping generateHTML.cjs as originalHTMLPath is blank or null.");
             runConvertToJpeg();
             return;
@@ -87,7 +87,7 @@ app.post('/update-texts', express.json(), (req, res) => {
 
     function runConvertToJpeg() {
         setTimeout(() => {
-            if (!fileConfig.localFilePath) {
+            if (!conversion.localFilePath) {
                 console.log("Skipping convertToJpeg.cjs as localFilePath is blank or null.");
                 runFtpFile();
                 return;
@@ -109,7 +109,7 @@ app.post('/update-texts', express.json(), (req, res) => {
 
     function runFtpFile() {
         setTimeout(() => {
-            if (!ftpConfig.host) {
+            if (!ftp.host) {
                 console.log("Skipping ftpFile.js as FTP settings are missing.");
                 runUploadToGitHub();
                 return;
@@ -155,6 +155,6 @@ app.post('/update-texts', express.json(), (req, res) => {
     }
 });
 
-app.listen(serverConfig.port, '0.0.0.0', () => {
-    console.log(`Server running at http://0.0.0.0:${serverConfig.port}`);
+app.listen(server.port, '0.0.0.0', () => {
+    console.log(`Server running at http://0.0.0.0:${server.port}`);
 });

@@ -1,64 +1,76 @@
-// config.js
+// Enhanced configuration file organized by consuming modules
+// This file contains all configuration settings for the espresso-api project
 module.exports = {
-  ftpConfig: {
-    host: 'ftpupload url', //leave value blank to skip ftp
-    user: 'UserID',
-    password: 'Password',
-    secure: false,
-    pasv: true
+  
+  // =================================================================
+  // EXPRESS SERVER CONFIGURATION (used by server.js)
+  // =================================================================
+  server: {
+    port: 3000,                                                    // Port for Express server to listen on
+    staticFilesDirectory: '/yourfolder/folder',                    // Directory to serve static files from
+    textFilePath: '/home/<username or folder>/espresso-api/textValues.json'  // Path to JSON file storing dynamic text values
   },
-  vidiots: {
-    posterBaseUrl: "https://example.github.io/TRMNL/",
-    // Add more Vidiots-related config values here as needed
-  },
-  fileConfig: {
-    localFilePath: 'http://localhost/espresso/output.html',  // The webpage URL to capture or leave blank to skip converting to Jpeg
-    localOutputPath: 'output.jpeg',  // The local path to save the screenshot
-    remoteOutputPath: '/your-folder/output.jpeg',  // The remote FTP path where the file will be uploaded
-  },
-  htmlConfig: {
-    originalHTMLPath: '/your-folder/index.html',
-    outputHTMLPath: '/your-folder/output.html',
-    serverURL: 'http://<server IP>:3000/get-text',
-    imagePaths: {
+
+  // =================================================================
+  // HTML GENERATION CONFIGURATION (used by generateHTML.cjs)
+  // =================================================================
+  htmlGeneration: {
+    originalHTMLPath: '/your-folder/index.html',                   // Path to the template HTML file to process
+    serverURL: 'http://<server IP>:3000/get-text',                // URL to fetch dynamic text values from server.js
+    imagePaths: {                                                  // Image URLs to replace in the HTML based on alt text
       smallcontainer: 'https://<githubUsername>.github.io/TRMNL/smallContainer.png',
       mediumcontainer: 'https://<githubUsername>.github.io/TRMNL/mediumContainer.png',
       largecontainer: 'https://<githubUsername>.github.io/TRMNL/largeContainer.png'
     }
   },
-  serverConfig: {
-    port: 3000,
-    staticFilesDirectory: '/yourfolder/folder',
-    textFilePath: '/home/<username or folder>/espresso-api/textValues.json'
-  },
-  outputFiles: {
-    html: '/home/pi/pages/example.github.io/output.html',
-    jpeg: '/home/pi/pages/example.github.io/output.jpeg',
-    logs: '/home/pi/pages/example.github.io/logs.txt'
-    // Add more as needed
-  },
-  github: {
-    username: 'username',
-    token: 'tokenText',
-    repo: '<username>.github.io',
-    branch: 'main',
-    repoLocalPath: '/absolute/path/to/your/repo', // <-- NEW: Local repo path for git CLI commands
+
+  // =================================================================
+  // IMAGE CONVERSION CONFIGURATION (used by convertToJpeg.cjs)
+  // =================================================================
+  conversion: {
+    localFilePath: 'http://localhost/espresso/output.html'         // URL of webpage to capture as screenshot (leave blank to skip conversion)
   },
 
-  file: {
-    filesToUpload: [
-      {
-        sourceFile: '/yourFolder/output.html',
-        destinationPath: 'foldername/output.html'
-      },
-      {
-        sourceFile: '/yourFolder/output.jpeg',
-        destinationPath: 'foldername/output.jpeg'
-      },
-      {
-        sourceFile: '/yourFolder/logs.txt',
-        destinationPath: 'foldername/logs.txt'
-      }
-    ]
+  // =================================================================
+  // FTP UPLOAD CONFIGURATION (used by ftpFile.js)
+  // =================================================================
+  ftp: {
+    host: 'ftpupload url',                                         // FTP server hostname (leave blank to skip FTP upload)
+    user: 'UserID',                                                // FTP username
+    password: 'Password',                                          // FTP password
+    secure: false,                                                 // Use FTPS (FTP over SSL/TLS)
+    pasv: true,                                                    // Use passive mode for FTP connections
+    localFilePath: '/path/to/local/file',                         // Local file path to upload via FTP
+    remoteOutputPath: '/your-folder/output.jpeg'                  // Remote FTP path where file will be uploaded
+  },
+
+  // =================================================================
+  // GITHUB UPLOAD CONFIGURATION (used by uploadToGitHub.mjs)
+  // =================================================================
+  github: {
+    username: 'username',                                          // GitHub username
+    token: 'tokenText',                                            // GitHub personal access token
+    repo: '<username>.github.io',                                 // GitHub repository name
+    branch: 'main',                                                // Git branch to push to
+    repoLocalPath: '/absolute/path/to/your/repo'                  // Local filesystem path to the git repository
+  },
+
+  // =================================================================
+  // OUTPUT FILE PATHS (used by multiple modules)
+  // =================================================================
+  outputFiles: {
+    html: '/home/pi/pages/example.github.io/output.html',         // Generated HTML file output path (generateHTML.cjs → convertToJpeg.cjs)
+    jpeg: '/home/pi/pages/example.github.io/output.jpeg',         // Screenshot JPEG output path (convertToJpeg.cjs)
+    logs: '/home/pi/pages/example.github.io/logs.txt',            // Log file output path
+    vidiots: '/home/pi/pages/example.github.io/vidiots.html'      // Vidiots scraping HTML output path (scrapeVidiots.cjs)
+  },
+
+  // =================================================================
+  // VIDIOTS SCRAPING CONFIGURATION (used by scrapeVidiots.cjs)
+  // =================================================================
+  vidiots: {
+    posterBaseUrl: "https://example.github.io/TRMNL/"             // Base URL for serving downloaded movie poster images
   }
+
+  // Note: Removed unused 'file.filesToUpload' configuration as no modules reference it
 }
