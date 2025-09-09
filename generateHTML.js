@@ -1,6 +1,6 @@
 // generateHTML.js
 const fs = require('fs');
-const { outputFiles, htmlConfig } = require('./config');
+const { outputFiles, htmlConfig } = require('./config.cjs');
 const { JSDOM } = require('jsdom');
 
 // Use dynamic import for node-fetch (ESM only, works in CommonJS this way)
@@ -65,3 +65,4 @@ async function main() {
 }
 
 main().catch(console.error);
+
