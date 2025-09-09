@@ -27,6 +27,12 @@ module.exports = {
     staticFilesDirectory: '/yourfolder/folder',
     textFilePath: '/home/<username or folder>/espresso-api/textValues.json'
   },
+  outputFiles: {
+    html: '/home/pi/pages/example.github.io/output.html',
+    jpeg: '/home/pi/pages/example.github.io/output.jpeg',
+    logs: '/home/pi/pages/example.github.io/logs.txt'
+    // Add more as needed
+  },
   github: {
     username: 'username',
     token: 'tokenText',
@@ -34,6 +40,7 @@ module.exports = {
     branch: 'main',
     repoLocalPath: '/absolute/path/to/your/repo', // <-- NEW: Local repo path for git CLI commands
   },
+
   file: {
     filesToUpload: [
       {
