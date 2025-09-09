@@ -201,7 +201,7 @@ async function scrapeComingSoon() {
 </body>
 </html>`;
 
-const { outputFiles } = require('./config');
+const { outputFiles } = require('./config.cjs');
 fs.writeFileSync(outputFiles.html, htmlContent.trim());
     console.log(`📝 HTML generated: outputScrapeVidiots.html`);
   } catch (err) {
@@ -220,6 +220,7 @@ cron.schedule('0 6,12 * * *', () => {
 
 // Run immediately
 scrapeComingSoon();
+
 
 
 
