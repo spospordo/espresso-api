@@ -3,6 +3,7 @@ const cheerio = require('cheerio');
 const fs = require('fs');
 const sharp = require('sharp');
 const cron = require('node-cron');
+const { outputFiles, vidiots } = require('./config.cjs');
 
 const BASE_URL = 'https://vidiotsfoundation.org';
 const url = `${BASE_URL}/coming-soon/`;
@@ -189,7 +190,7 @@ async function scrapeComingSoon() {
   ${movies.map(m => `
     <div class="movie">
       <div class="poster">
-        ${m.posterUrl ? `<img src="${m.posterFile}" alt="${m.title} poster">` : ''}
+        ${m.posterUrl ? `<img src="${vidiots.posterBaseUrl}${m.posterFile}" alt="${m.title} poster">` : ''}
       </div>
       <div class="info">
         <div class="title">${m.title}${m.minidetails || ''}</div>
@@ -201,16 +202,17 @@ async function scrapeComingSoon() {
 </body>
 </html>`;
 
-const { outputFiles } = require('./config.cjs');
-fs.writeFileSync(outputFiles.html, htmlContent.trim());
-    console.log(`📝 HTML generated: outputScrapeVidiots.html`);
+    fs.writeFileSync(outputFiles.html, htmlContent.trim());
+    console.log(`📝 HTML generated: ${outputFiles.html}`);
   } catch (err) {
     console.error('❌ Error scraping:', err.message);
   }
 }
+
 // call git upload
-import { schedulePush } from './uploadToGitHub.mjs';
-schedulePush("Automated Commit and push from server.js project");
+import('./uploadToGitHub.mjs').then(({ schedulePush }) => {
+  schedulePush("Automated Commit and push from server.js project");
+});
 
 // Schedule scraping
 cron.schedule('0 6,12 * * *', () => {
@@ -220,8 +222,3 @@ cron.schedule('0 6,12 * * *', () => {
 
 // Run immediately
 scrapeComingSoon();
-
-
-
-
-
