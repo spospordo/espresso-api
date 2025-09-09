@@ -4,7 +4,7 @@ import fs from 'fs';
 import { exec } from 'child_process';
 
 // Import CommonJS config.js with compatibility for ESM
-import * as configModule from './config.js';
+import * as configModule from './config.cjs';
 const config = configModule.default ?? configModule;
 const { serverConfig, htmlConfig, fileConfig, ftpConfig, github } = config;
 
