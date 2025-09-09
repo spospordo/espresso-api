@@ -201,7 +201,7 @@ async function scrapeComingSoon() {
 </body>
 </html>`;
 
-    fs.writeFileSync('outputScrapeVidiots.html', htmlContent.trim());
+    fs.writeFileSync('spospordo.github.io/outputScrapeVidiots.html', htmlContent.trim());
     console.log(`📝 HTML generated: outputScrapeVidiots.html`);
   } catch (err) {
     console.error('❌ Error scraping:', err.message);
@@ -219,5 +219,6 @@ cron.schedule('0 6,12 * * *', () => {
 
 // Run immediately
 scrapeComingSoon();
+
 
 
