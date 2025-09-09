@@ -1,66 +1,93 @@
-import { execSync } from "child_process";
-import config from './config.js';
+import { spawnSync } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { github } from './config.js';
 
-const {
-  username,
-  token,
-  repo,
-  branch,
-  repoLocalPath
-} = config.github;
+// Get __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
+// Use the path to your local GitHub Pages repo from config
+const repoPath = github.repoLocalPath || '/home/pi/pages/spospordo.github.io';
+
+// Function to check if there are changes to commit
+function hasChanges() {
+  const result = spawnSync('git', ['status', '--porcelain'], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+
+  if (result.error) {
+    console.error('Error running git status:', result.error);
+    return false;
+  }
+
+  return result.stdout.trim().length > 0;
+}
+
+// Function to push changes to GitHub
+function pushToGitHub(commitMessage = 'Automated commit and push') {
+  if (!hasChanges()) {
+    console.log('No changes to commit.');
+    return;
+  }
+
+  // git add -A
+  let result = spawnSync('git', ['add', '-A'], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  if (result.error) {
+    console.error('Error running git add:', result.error);
+    return;
+  }
+
+  // git commit -m "message"
+  result = spawnSync('git', ['commit', '-m', commitMessage], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  if (result.error) {
+    console.error('Error running git commit:', result.error);
+    return;
+  }
+  if (result.stdout) {
+    console.log(result.stdout.trim());
+  }
+  if (result.stderr) {
+    console.error(result.stderr.trim());
+  }
+
+  // git push
+  result = spawnSync('git', ['push'], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  if (result.error) {
+    console.error('Error running git push:', result.error);
+    return;
+  }
+  if (result.stdout) {
+    console.log(result.stdout.trim());
+  }
+  if (result.stderr) {
+    console.error(result.stderr.trim());
+  }
+}
+
+// Debounce mechanism to avoid too frequent pushes
 let pushTimeout = null;
-const DEBOUNCE_TIME = 30000; // 30 seconds
-
-/**
- * Checks if there are uncommitted changes in the repo.
- * @param {string} repoPath - The local path to the git repository.
- * @returns {boolean} - True if changes exist, false otherwise.
- */
-function hasChanges(repoPath) {
-  const output = execSync("git status --porcelain", { cwd: repoPath }).toString();
-  return output.trim().length > 0;
-}
-
-/**
- * Adds, commits, and pushes changes to GitHub if there are changes.
- * @param {string} repoPath - The local path to the git repository.
- * @param {string} commitMessage - The commit message.
- */
-function pushToGitHub(repoPath, commitMessage = "Automated Commit and push from server.js project") {
-  if (!hasChanges(repoPath)) {
-    console.log("No changes to push.");
-    return;
+export function schedulePush(commitMessage = 'Automated commit and push') {
+  if (pushTimeout) {
+    clearTimeout(pushTimeout);
   }
-  try {
-    execSync("git add .", { cwd: repoPath });
-    execSync(`git commit -m "${commitMessage}"`, { cwd: repoPath });
-    execSync("git push", { cwd: repoPath });
-    console.log("Pushed changes to GitHub.");
-  } catch (e) {
-    console.error("Error during git push:", e.stderr?.toString() || e.message);
-  }
-}
-
-/**
- * Debounced function to schedule a push.
- * Multiple calls within DEBOUNCE_TIME will only result in a single push.
- * @param {string} commitMessage - The commit message.
- */
-export function schedulePush(commitMessage) {
-  const repoPath = repoLocalPath;
-  if (!repoPath) {
-    console.warn("No repoLocalPath configured, skipping git push.");
-    return;
-  }
-  if (pushTimeout) clearTimeout(pushTimeout);
   pushTimeout = setTimeout(() => {
-    pushToGitHub(repoPath, commitMessage);
+    pushToGitHub(commitMessage);
     pushTimeout = null;
-  }, DEBOUNCE_TIME);
+  }, 5000); // 5 seconds debounce
 }
 
-// For CLI usage, allow node uploadToGitHub.mjs to trigger an immediate push
-if (process.argv[1] === new URL(import.meta.url).pathname) {
-  schedulePush("Automated Commit and push from server.js project");
+// If run directly, perform a push
+if (import.meta.url === `file://${process.argv[1]}`) {
+  pushToGitHub(process.argv[2] || 'Automated commit and push');
 }
