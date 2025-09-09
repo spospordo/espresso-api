@@ -3,7 +3,9 @@ const cors = require('cors');
 const fs = require('fs');
 const { exec } = require('child_process');
 const app = express();
-const { serverConfig, htmlConfig, fileConfig, ftpConfig, github } = require('./config');
+//const { serverConfig, htmlConfig, fileConfig, ftpConfig, github } = require('./config');
+import config from './config.js';
+const { github } = config;
 
 // Dynamically import the schedulePush function for debounced git pushes
 let schedulePush;
