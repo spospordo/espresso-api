@@ -202,8 +202,8 @@ async function scrapeComingSoon() {
 </body>
 </html>`;
 
-    fs.writeFileSync(outputFiles.html, htmlContent.trim());
-    console.log(`📝 HTML generated: ${outputFiles.html}`);
+    fs.writeFileSync(outputFiles.vidiots, htmlContent.trim());
+    console.log(`📝 HTML generated: ${outputFiles.vidiots}`);
   } catch (err) {
     console.error('❌ Error scraping:', err.message);
   }
@@ -222,3 +222,4 @@ cron.schedule('0 6,12 * * *', () => {
 
 // Run immediately
 scrapeComingSoon();
+
