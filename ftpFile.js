@@ -1,5 +1,5 @@
 const ftp = require('basic-ftp');
-const { ftpConfig, fileConfig } = require('./config'); // Import FTP and file configuration from config.js
+const { ftpConfig, fileConfig } = require('./config.cjs'); // Import FTP and file configuration from config.js
 const fs = require('fs');  // Import fs module to check file existence
 
 async function uploadToFTP() {
