@@ -1,11 +1,11 @@
-const express = require('express');
-const cors = require('cors');
-const fs = require('fs');
-const { exec } = require('child_process');
-const app = express();
-//const { serverConfig, htmlConfig, fileConfig, ftpConfig, github } = require('./config');
+import express from 'express';
+import cors from 'cors';
+import fs from 'fs';
+import { exec } from 'child_process';
 import config from './config.js';
-const { github } = config;
+
+// Destructure config objects
+const { serverConfig, htmlConfig, fileConfig, ftpConfig, github } = config;
 
 // Dynamically import the schedulePush function for debounced git pushes
 let schedulePush;
@@ -17,6 +17,8 @@ let schedulePush;
     console.error('Could not import schedulePush:', err);
   }
 })();
+
+const app = express();
 
 app.use(cors());
 app.use(express.static(serverConfig.staticFilesDirectory));
