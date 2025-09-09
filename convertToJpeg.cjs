@@ -1,6 +1,6 @@
 // convertToJpeg.js
 const puppeteer = require('puppeteer');
-const { outputFiles } = require('./config');
+const { outputFiles } = require('./config.cjs');
 const path = require('path');
 
 async function captureScreenshot() {
