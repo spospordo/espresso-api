@@ -7,6 +7,10 @@ module.exports = {
     secure: false,
     pasv: true
   },
+  vidiots: {
+    posterBaseUrl: "https://example.github.io/TRMNL/",
+    // Add more Vidiots-related config values here as needed
+  },
   fileConfig: {
     localFilePath: 'http://localhost/espresso/output.html',  // The webpage URL to capture or leave blank to skip converting to Jpeg
     localOutputPath: 'output.jpeg',  // The local path to save the screenshot
