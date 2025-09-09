@@ -7,7 +7,7 @@ module.exports = {
   // =================================================================
   server: {
     port: 3000,                                                    // Port for Express server to listen on
-    staticFilesDirectory: '/yourfolder/folder',                    // Directory to serve static files from
+    staticFilesDirectory: '/yourfolder/folder',                    // Working Directory to serve static files from
     textFilePath: '/home/<username or folder>/espresso-api/textValues.json'  // Path to JSON file storing dynamic text values
   },
 
