@@ -22,7 +22,7 @@ function hasChanges() {
     return false;
   }
 
-  return result.stdout.trim().length > 0;
+  return result.stdout && result.stdout.trim().length > 0;
 }
 
 // Function to push changes to GitHub
