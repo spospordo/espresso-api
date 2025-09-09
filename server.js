@@ -88,19 +88,19 @@ app.post('/update-texts', express.json(), (req, res) => {
     function runConvertToJpeg() {
         setTimeout(() => {
             if (!fileConfig.localFilePath) {
-                console.log("Skipping convertToJpeg.js as localFilePath is blank or null.");
+                console.log("Skipping convertToJpeg.cjs as localFilePath is blank or null.");
                 runFtpFile();
                 return;
             }
-            console.log('Running the convertToJpeg.js script...');
-            exec('node convertToJpeg.js', (error, stdout, stderr) => {
+            console.log('Running the convertToJpeg.cjs script...');
+            exec('node convertToJpeg.cjs', (error, stdout, stderr) => {
                 if (error) {
-                    console.error(`Error executing convertToJpeg.js: ${error}`);
+                    console.error(`Error executing convertToJpeg.cjs: ${error}`);
                     return;
                 }
-                console.log(`convertToJpeg.js output: ${stdout}`);
+                console.log(`convertToJpeg.cjs output: ${stdout}`);
                 if (stderr) {
-                    console.error(`convertToJpeg.js stderr: ${stderr}`);
+                    console.error(`convertToJpeg.cjs stderr: ${stderr}`);
                 }
                 runFtpFile();
             });
