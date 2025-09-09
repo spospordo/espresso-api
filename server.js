@@ -2,9 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import { exec } from 'child_process';
-import config from './config.js';
 
-// Destructure config objects
+// Import CommonJS config.js with compatibility for ESM
+import configModule from './config.js';
+const config = configModule.default ?? configModule;
 const { serverConfig, htmlConfig, fileConfig, ftpConfig, github } = config;
 
 // Dynamically import the schedulePush function for debounced git pushes
@@ -139,7 +140,7 @@ app.post('/update-texts', express.json(), (req, res) => {
                 schedulePush("Automated Commit and push from server.js project");
             } else {
                 console.log('Falling back to running uploadToGitHub.mjs directly...');
-                exec('node --experimental-modules uploadToGitHub.mjs', (error, stdout, stderr) => {
+                exec('node uploadToGitHub.mjs', (error, stdout, stderr) => {
                     if (error) {
                         console.error(`Error executing uploadToGitHub.mjs: ${error}`);
                         return;
