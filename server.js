@@ -64,22 +64,22 @@ app.post('/update-texts', express.json(), (req, res) => {
     saveTextValues();
     res.status(200).send('Text values updated successfully');
 
-    // Run generateHTML.js first
+    // Run generateHTML.cjs first
     setTimeout(() => {
         if (!htmlConfig.originalHTMLPath) {
-            console.log("Skipping generateHTML.js as originalHTMLPath is blank or null.");
+            console.log("Skipping generateHTML.cjs as originalHTMLPath is blank or null.");
             runConvertToJpeg();
             return;
         }
-        console.log('Running the generateHTML.js script...');
-        exec('node generateHTML.js', (error, stdout, stderr) => {
+        console.log('Running the generateHTML.cjs script...');
+        exec('node generateHTML.cjs', (error, stdout, stderr) => {
             if (error) {
-                console.error(`Error executing generateHTML.js: ${error}`);
+                console.error(`Error executing generateHTML.cjs: ${error}`);
                 return;
             }
-            console.log(`generateHTML.js output: ${stdout}`);
+            console.log(`generateHTML.cjs output: ${stdout}`);
             if (stderr) {
-                console.error(`generateHTML.js stderr: ${stderr}`);
+                console.error(`generateHTML.cjs stderr: ${stderr}`);
             }
             runConvertToJpeg();
         });
