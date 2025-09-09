@@ -1,36 +1,30 @@
 // convertToJpeg.js
 const puppeteer = require('puppeteer');
-const { fileConfig } = require('./config'); // Import file configuration from config.js
+const { outputFiles } = require('./config'); // Now using externalized output path
 
 async function captureScreenshot() {
   const browser = await puppeteer.launch({
     executablePath: '/usr/bin/chromium-browser', // Use the system-installed Chromium
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'], // Useful for restricted environments
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
 
   const page = await browser.newPage();
 
-  const filePath = fileConfig.localFilePath; // URL to capture from
+  // The file to capture from should be an HTML file in your output folder
+  // If you want to use a URL, you can externalize that in config as well
   try {
-    // Increase the timeout and wait until DOM is loaded
-    await page.goto(filePath, { waitUntil: 'domcontentloaded', timeout: 60000 }); // 60 seconds timeout
+    await page.goto('file://' + outputFiles.html, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.setViewport({ width: 800, height: 480 });
 
-    const outputPath = fileConfig.localOutputPath; // Path to save the screenshot locally
-
-    // Take a screenshot and save it as JPEG
+    // Take a screenshot and save it as JPEG to the Pages repo
     await page.screenshot({
-      path: outputPath,
+      path: outputFiles.jpeg,
       type: 'jpeg',
-      quality: 100, // You can adjust the quality (0-100)
+      quality: 100,
     });
 
     console.log('Screenshot taken successfully!');
-
-    // Now you can call the FTP upload function here if needed
-    // import the uploadToFTP function if needed later, but this file is just for screenshot now.
-    
   } catch (error) {
     console.error('Error while navigating:', error);
   } finally {
