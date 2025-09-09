@@ -1,15 +1,15 @@
 // generateHTML.js
 const fs = require('fs');
-const { outputFiles, htmlConfig } = require('./config.cjs');
+const { outputFiles, htmlGeneration } = require('./config.cjs');
 const { JSDOM } = require('jsdom');
 
 // Use dynamic import for node-fetch (ESM only, works in CommonJS this way)
 async function main() {
   const fetch = (await import('node-fetch')).default;
 
-  const originalHTMLPath = htmlConfig.originalHTMLPath;
-  const serverURL = htmlConfig.serverURL;
-  const imagePaths = htmlConfig.imagePaths;
+  const originalHTMLPath = htmlGeneration.originalHTMLPath;
+  const serverURL = htmlGeneration.serverURL;
+  const imagePaths = htmlGeneration.imagePaths;
 
   // Fetch the dynamic text values from the server
   const textValues = await fetch(serverURL)
