@@ -16,6 +16,28 @@ Clone repository
 ```
 git clone https://github.com/spospordo/espresso-api.git
 ```
+
+### Configuration Setup
+
+The project requires a `config.cjs` file with your private settings. This file is kept out of version control for security.
+
+1. **Copy the example configuration:**
+   ```
+   npm run setup
+   ```
+   or manually:
+   ```
+   cp config.cjs.example config.cjs
+   ```
+
+2. **Edit your configuration:**
+   ```
+   nano config.cjs  # or your preferred editor
+   ```
+   Update all the placeholder values with your actual settings (server paths, FTP credentials, GitHub tokens, etc.)
+
+3. **Your config.cjs file is private** - it will not be tracked by git and won't be included in commits.
+
 ## update
 ```
 git pull && npm install
