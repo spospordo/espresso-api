@@ -1,6 +1,7 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
+const path = require('path');
 const sharp = require('sharp');
 const cron = require('node-cron');
 const { outputFiles, vidiots } = require('./config.cjs');
@@ -18,8 +19,35 @@ function truncateText(text, maxLength = 180) {
   return text.length > maxLength ? text.substring(0, maxLength).trim() + '…' : text;
 }
 
+function cleanupOldPosterImages() {
+  try {
+    const currentDir = process.cwd();
+    const files = fs.readdirSync(currentDir);
+    
+    // Find and remove old poster images (vidiotsPoster*.jpg)
+    const posterFiles = files.filter(file => 
+      file.match(/^vidiotsPoster\d+\.jpg$/)
+    );
+    
+    if (posterFiles.length > 0) {
+      console.log(`🧹 Cleaning up ${posterFiles.length} old poster image(s)...`);
+      posterFiles.forEach(file => {
+        const filePath = path.join(currentDir, file);
+        fs.unlinkSync(filePath);
+        console.log(`🗑️ Removed: ${file}`);
+      });
+    } else {
+      console.log('🧹 No old poster images to clean up');
+    }
+  } catch (err) {
+    console.error(`❌ Error during cleanup: ${err.message}`);
+    // Don't fail the entire process if cleanup fails
+  }
+}
+
 async function downloadAndResizeImage(imageUrl, localFile) {
   try {
+    console.log(`⬇️ Downloading: ${imageUrl}`);
     const response = await axios.get(imageUrl, { responseType: 'arraybuffer', headers: HEADERS });
     if (!response.headers['content-type'] || !response.headers['content-type'].startsWith('image')) {
       throw new Error('Not an image content-type: ' + response.headers['content-type']);
@@ -28,13 +56,18 @@ async function downloadAndResizeImage(imageUrl, localFile) {
       .resize(100, 150, { fit: 'inside', withoutEnlargement: true })
       .toFile(localFile);
     console.log(`✅ Image saved and resized: ${localFile}`);
+    return true;
   } catch (err) {
     console.error(`❌ Download/resize failed for ${imageUrl}: ${err.message}`);
+    return false;
   }
 }
 
 async function scrapeComingSoon() {
   try {
+    // Clean up old poster images before downloading new ones
+    cleanupOldPosterImages();
+    
     console.log(`🌐 Fetching: ${url}`);
     const { data: html } = await axios.get(url, { headers: HEADERS });
     const $ = cheerio.load(html);
@@ -135,13 +168,28 @@ async function scrapeComingSoon() {
     });
 
     // Download and resize posters
+    let successCount = 0;
+    let failureCount = 0;
+    
     for (const m of movies) {
       if (m.posterUrl) {
         console.log(`⬇️ Downloading poster for "${m.title}" -> ${m.posterUrl}`);
-        await downloadAndResizeImage(m.posterUrl, m.posterFile);
+        const success = await downloadAndResizeImage(m.posterUrl, m.posterFile);
+        if (success) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
       } else {
         console.log(`⚠️ No poster URL for "${m.title}"`);
+        failureCount++;
       }
+    }
+    
+    console.log(`📊 Download summary: ${successCount} successful, ${failureCount} failed`);
+    
+    if (movies.length > 0 && successCount === 0) {
+      console.warn('⚠️ Warning: No poster images were successfully downloaded!');
     }
 
     // Build HTML
