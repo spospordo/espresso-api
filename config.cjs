@@ -69,6 +69,6 @@ module.exports = {
   // =================================================================
   vidiots: {
     posterBaseUrl: "https://example.github.io/TRMNL/",           // Base URL for serving downloaded movie poster images
-    posterDirectory: "/tmp"                                      // Local directory where poster images will be saved
+    posterDirectory: "/tmp/vidiots-posters"                     // Local directory where poster images will be saved
   }
 }
