@@ -21,8 +21,8 @@ function truncateText(text, maxLength = 180) {
 
 function cleanupOldPosterImages() {
   try {
-    const currentDir = process.cwd();
-    const files = fs.readdirSync(currentDir);
+    const posterDir = vidiots.posterDirectory || process.cwd();
+    const files = fs.readdirSync(posterDir);
     
     // Find and remove old poster images (vidiotsPoster*.jpg)
     const posterFiles = files.filter(file => 
@@ -30,14 +30,14 @@ function cleanupOldPosterImages() {
     );
     
     if (posterFiles.length > 0) {
-      console.log(`🧹 Cleaning up ${posterFiles.length} old poster image(s)...`);
+      console.log(`🧹 Cleaning up ${posterFiles.length} old poster image(s) from ${posterDir}...`);
       posterFiles.forEach(file => {
-        const filePath = path.join(currentDir, file);
+        const filePath = path.join(posterDir, file);
         fs.unlinkSync(filePath);
         console.log(`🗑️ Removed: ${file}`);
       });
     } else {
-      console.log('🧹 No old poster images to clean up');
+      console.log(`🧹 No old poster images to clean up in ${posterDir}`);
     }
   } catch (err) {
     console.error(`❌ Error during cleanup: ${err.message}`);
@@ -88,6 +88,7 @@ async function scrapeComingSoon() {
         console.log(`🖼 Poster URL for "${title}": ${posterUrl}`);
       }
       const posterFile = `vidiotsPoster${i + 1}.jpg`;
+      const posterFilePath = path.join(vidiots.posterDirectory || process.cwd(), posterFile);
 
       // --- Robust Dates and Times Extraction (no pairing logic) ---
       const uniqueDates = new Set();
@@ -162,6 +163,7 @@ async function scrapeComingSoon() {
           description,
           posterUrl,
           posterFile,
+          posterFilePath,
           pills
         });
       }
@@ -174,7 +176,7 @@ async function scrapeComingSoon() {
     for (const m of movies) {
       if (m.posterUrl) {
         console.log(`⬇️ Downloading poster for "${m.title}" -> ${m.posterUrl}`);
-        const success = await downloadAndResizeImage(m.posterUrl, m.posterFile);
+        const success = await downloadAndResizeImage(m.posterUrl, m.posterFilePath);
         if (success) {
           successCount++;
         } else {

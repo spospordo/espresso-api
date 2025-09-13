@@ -68,6 +68,7 @@ module.exports = {
   // VIDIOTS SCRAPING CONFIGURATION (used by scrapeVidiots.cjs)
   // =================================================================
   vidiots: {
-    posterBaseUrl: "https://example.github.io/TRMNL/"
+    posterBaseUrl: "https://example.github.io/TRMNL/",           // Base URL for serving downloaded movie poster images
+    posterDirectory: "/tmp"                                      // Local directory where poster images will be saved
   }
 }
