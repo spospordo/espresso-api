@@ -161,11 +161,12 @@ async function shouldUpdateFile(filePath, newContent) {
 // Extract movie titles from HTML content for comparison
 function extractMovieTitles(htmlContent) {
   try {
-    const titleMatches = htmlContent.match(/<div class="title">([^<]+?)(?:<span|$)/g);
+    // Look for the title div pattern used in our generated HTML
+    const titleMatches = htmlContent.match(/<div class="title">([^<]+?)(?:<span|<\/div>)/g);
     if (!titleMatches) return [];
     
     return titleMatches.map(match => {
-      const titleMatch = match.match(/<div class="title">([^<]+)/);
+      const titleMatch = match.match(/<div class="title">([^<]+?)(?:<span|<\/div>)/);
       return titleMatch ? titleMatch[1].trim() : '';
     }).filter(title => title.length > 0);
   } catch (error) {
