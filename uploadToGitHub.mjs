@@ -30,34 +30,116 @@ try {
   console.warn('⚠️  Could not verify repository path:', err.message);
 }
 
-// Function to check if there are changes to commit
+// Function to check if there are changes to commit or if local is ahead of remote
 function hasChanges() {
   console.log(`🔍 Checking for changes in: ${repoPath}`);
-  const result = spawnSync('git', ['status', '--porcelain'], {
+  
+  // First, check for uncommitted local changes
+  const statusResult = spawnSync('git', ['status', '--porcelain'], {
     cwd: repoPath,
     encoding: 'utf8'
   });
 
-  if (result.error) {
-    console.error('❌ Error running git status:', result.error);
+  if (statusResult.error) {
+    console.error('❌ Error running git status:', statusResult.error);
     return false;
   }
   
-  if (result.status !== 0) {
-    console.error('❌ git status failed with status:', result.status);
-    console.error('stderr:', result.stderr);
+  if (statusResult.status !== 0) {
+    console.error('❌ git status failed with status:', statusResult.status);
+    console.error('stderr:', statusResult.stderr);
     return false;
   }
 
-  const hasChanges = result.stdout && result.stdout.trim().length > 0;
-  if (hasChanges) {
-    console.log('📋 Changes detected:');
-    console.log(result.stdout.trim());
-  } else {
-    console.log('📋 No changes detected');
+  const hasLocalChanges = statusResult.stdout && statusResult.stdout.trim().length > 0;
+  if (hasLocalChanges) {
+    console.log('📋 Local working directory changes detected:');
+    console.log(statusResult.stdout.trim());
+    return true;
   }
+
+  // Check if local repository is ahead of remote (has commits that haven't been pushed)
+  console.log('🔍 Checking if local repository is ahead of remote...');
   
-  return hasChanges;
+  // Get current branch name
+  const currentBranchResult = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  
+  if (currentBranchResult.status !== 0) {
+    console.log('📋 No changes detected (cannot determine current branch)');
+    return false;
+  }
+
+  const currentBranch = currentBranchResult.stdout.trim();
+  console.log(`📊 Current branch: ${currentBranch}`);
+  
+  // Check if we have any remotes configured
+  const remotesResult = spawnSync('git', ['remote'], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  
+  if (remotesResult.status === 0 && remotesResult.stdout.trim().length > 0) {
+    // We have remotes, so we can check properly
+    const remotes = remotesResult.stdout.trim().split('\n');
+    const defaultRemote = remotes[0]; // Use first remote (usually 'origin')
+    console.log(`📊 Found remote: ${defaultRemote}`);
+    
+    // Check if remote branch exists
+    const remoteBranchCheck = spawnSync('git', ['rev-parse', '--verify', `${defaultRemote}/${currentBranch}`], {
+      cwd: repoPath,
+      encoding: 'utf8'
+    });
+    
+    if (remoteBranchCheck.status === 0) {
+      // Remote branch exists, check if we're ahead
+      const aheadResult = spawnSync('git', ['rev-list', '--count', `${defaultRemote}/${currentBranch}..HEAD`], {
+        cwd: repoPath,
+        encoding: 'utf8'
+      });
+      
+      if (aheadResult.status === 0) {
+        const aheadCount = parseInt(aheadResult.stdout.trim()) || 0;
+        console.log(`📊 Local repository is ${aheadCount} commits ahead of ${defaultRemote}/${currentBranch}`);
+        
+        if (aheadCount > 0) {
+          console.log('📋 Local repository has unpushed commits, push needed');
+          return true;
+        }
+      }
+    } else {
+      // Remote branch doesn't exist, so we definitely need to push
+      console.log(`📊 Remote branch ${defaultRemote}/${currentBranch} doesn't exist, push needed`);
+      return true;
+    }
+  } else {
+    // No remotes configured - this usually means we need to set up and push
+    console.log('📊 No remotes configured in repository');
+    
+    // Check if we have any commits at all
+    const commitCountResult = spawnSync('git', ['rev-list', '--count', 'HEAD'], {
+      cwd: repoPath,
+      encoding: 'utf8'
+    });
+    
+    if (commitCountResult.status === 0) {
+      const commitCount = parseInt(commitCountResult.stdout.trim()) || 0;
+      console.log(`📊 Repository has ${commitCount} commits but no remote configured`);
+      
+      if (commitCount > 0) {
+        console.log('📋 Repository has commits but no remote - this may need manual setup');
+        // In this case, we'll return false since we can't push without a remote
+        // but log it as an issue that needs attention
+        console.log('⚠️  Warning: Repository has commits but no remote configured for pushing');
+        return false;
+      }
+    }
+  }
+
+  console.log('📋 No changes detected (no local changes and repository is up to date with remote)');
+  return false;
 }
 
 // Function to push changes to GitHub
@@ -66,74 +148,86 @@ function pushToGitHub(commitMessage = 'Automated commit and push') {
   console.log(`📁 Repository path: ${repoPath}`);
   
   if (!hasChanges()) {
-    console.log('📋 No changes to commit.');
+    console.log('📋 No changes to commit or push.');
     return;
   }
 
   console.log('📝 Changes detected, proceeding with git operations...');
 
-  // git add -A
-  console.log('📤 Adding files to git...');
-  let result = spawnSync('git', ['add', '-A'], {
+  // Check if there are uncommitted changes that need to be added and committed
+  const statusResult = spawnSync('git', ['status', '--porcelain'], {
     cwd: repoPath,
     encoding: 'utf8'
   });
-  if (result.error) {
-    console.error('❌ Error running git add:', result.error);
-    return;
-  }
-  if (result.status !== 0) {
-    console.error('❌ git add failed with status:', result.status);
-    console.error('stderr:', result.stderr);
-    return;
-  }
-  console.log('✅ Files added successfully');
 
-  // git commit -m "message"
-  console.log('💾 Committing changes...');
-  result = spawnSync('git', ['commit', '-m', commitMessage], {
-    cwd: repoPath,
-    encoding: 'utf8'
-  });
-  if (result.error) {
-    console.error('❌ Error running git commit:', result.error);
-    return;
-  }
-  if (result.status !== 0) {
-    console.error('❌ git commit failed with status:', result.status);
-    console.error('stderr:', result.stderr);
-    return;
-  }
-  if (result.stdout) {
-    console.log('✅ Commit successful:', result.stdout.trim());
+  const hasUncommittedChanges = statusResult.status === 0 && statusResult.stdout && statusResult.stdout.trim().length > 0;
+
+  if (hasUncommittedChanges) {
+    // git add -A
+    console.log('📤 Adding files to git...');
+    let result = spawnSync('git', ['add', '-A'], {
+      cwd: repoPath,
+      encoding: 'utf8'
+    });
+    if (result.error) {
+      console.error('❌ Error running git add:', result.error);
+      return;
+    }
+    if (result.status !== 0) {
+      console.error('❌ git add failed with status:', result.status);
+      console.error('stderr:', result.stderr);
+      return;
+    }
+    console.log('✅ Files added successfully');
+
+    // git commit -m "message"
+    console.log('💾 Committing changes...');
+    result = spawnSync('git', ['commit', '-m', commitMessage], {
+      cwd: repoPath,
+      encoding: 'utf8'
+    });
+    if (result.error) {
+      console.error('❌ Error running git commit:', result.error);
+      return;
+    }
+    if (result.status !== 0) {
+      console.error('❌ git commit failed with status:', result.status);
+      console.error('stderr:', result.stderr);
+      return;
+    }
+    if (result.stdout) {
+      console.log('✅ Commit successful:', result.stdout.trim());
+    }
+  } else {
+    console.log('📝 No uncommitted changes, proceeding directly to push...');
   }
 
   // git push
   console.log('⬆️  Pushing to GitHub...');
-  result = spawnSync('git', ['push'], {
+  const pushResult = spawnSync('git', ['push'], {
     cwd: repoPath,
     encoding: 'utf8'
   });
-  if (result.error) {
-    console.error('❌ Error running git push:', result.error);
+  if (pushResult.error) {
+    console.error('❌ Error running git push:', pushResult.error);
     return;
   }
-  if (result.status !== 0) {
-    console.error('❌ git push failed with status:', result.status);
-    console.error('stderr:', result.stderr);
+  if (pushResult.status !== 0) {
+    console.error('❌ git push failed with status:', pushResult.status);
+    console.error('stderr:', pushResult.stderr);
     return;
   }
   
   // Git push can have output in stderr that's not an error (like progress info)
-  if (result.stdout && result.stdout.trim()) {
-    console.log('✅ Push successful:', result.stdout.trim());
+  if (pushResult.stdout && pushResult.stdout.trim()) {
+    console.log('✅ Push successful:', pushResult.stdout.trim());
   }
-  if (result.stderr && result.stderr.trim()) {
+  if (pushResult.stderr && pushResult.stderr.trim()) {
     // stderr might contain progress information, not necessarily errors
-    console.log('📊 Push info:', result.stderr.trim());
+    console.log('📊 Push info:', pushResult.stderr.trim());
   }
   
-  if (result.status === 0) {
+  if (pushResult.status === 0) {
     console.log('🎉 Successfully pushed changes to GitHub!');
   }
 }
