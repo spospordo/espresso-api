@@ -537,16 +537,19 @@ async function runScrapeAndUpload() {
     
     if (wasUpdated) {
       console.log('📤 Content was updated, triggering git upload...');
-      import('./uploadToGitHub.mjs').then(({ schedulePush }) => {
+      try {
+        const { schedulePush } = await import('./uploadToGitHub.mjs');
         schedulePush("Automated Commit and push from scrapeVidiots.cjs - content updated");
-      }).catch(err => {
-        console.error('❌ Error scheduling git upload:', err.message);
-      });
+      } catch (err) {
+        console.error('❌ Error importing or scheduling git upload:', err.message);
+        console.error('❌ Stack trace:', err.stack);
+      }
     } else {
       console.log('📤 No content changes, skipping git upload');
     }
   } catch (error) {
     console.error('❌ Error in runScrapeAndUpload:', error.message);
+    console.error('❌ Stack trace:', error.stack);
   }
 }
 

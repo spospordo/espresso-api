@@ -70,7 +70,9 @@ module.exports = {
   // =================================================================
   vidiots: {
     posterBaseUrl: "https://example.github.io/TRMNL/",           // Base URL for serving downloaded movie poster images
-    posterDirectory: "/home/pi/pages/example.github.io"          // Local directory where poster images will be saved
+    posterDirectory: "/home/pi/pages/example.github.io",         // Local directory where poster images will be saved
+    forceUpdate: false,                                          // Force update HTML file even if content hasn't changed (set to true to always push updates)
+    maxAgeHours: 24                                              // Maximum age in hours before forcing an update regardless of content changes
   }
 
   // Note: Removed unused 'file.filesToUpload' configuration as no modules reference it
