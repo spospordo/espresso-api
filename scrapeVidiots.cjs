@@ -126,15 +126,55 @@ async function shouldUpdateFile(filePath, newContent) {
       return true; // No existing file, so update
     }
     
+    // Check if force update is enabled
+    if (vidiots.forceUpdate) {
+      console.log('📄 Force update enabled in configuration, updating file');
+      return true;
+    }
+    
+    // Check file age - force update if file is too old
+    const stats = fs.statSync(filePath);
+    const fileAgeHours = (Date.now() - stats.mtime.getTime()) / (1000 * 60 * 60);
+    const maxAgeHours = vidiots.maxAgeHours || 24;
+    
+    if (fileAgeHours > maxAgeHours) {
+      console.log(`📄 File is ${fileAgeHours.toFixed(1)} hours old (max: ${maxAgeHours}), forcing update`);
+      return true;
+    }
+    
     const existingContent = fs.readFileSync(filePath, 'utf8');
     
-    // Simple content comparison - could be enhanced with semantic comparison
-    if (existingContent.trim() === newContent.trim()) {
+    // Basic content comparison logging
+    console.log(`🔍 Comparing content: existing ${existingContent.length} chars vs new ${newContent.length} chars, age ${fileAgeHours.toFixed(1)}h`);
+    
+    // Normalize content for comparison - remove extra whitespace and normalize line endings
+    const normalizeContent = (content) => {
+      return content
+        .trim()
+        .replace(/\r\n/g, '\n')  // Normalize line endings
+        .replace(/\s+/g, ' ')    // Normalize multiple spaces to single space
+        .replace(/\s*\n\s*/g, '\n') // Clean up line breaks
+    };
+    
+    const existingNormalized = normalizeContent(existingContent);
+    const newNormalized = normalizeContent(newContent);
+    
+    // Try both strict comparison and normalized comparison
+    const strictlyIdentical = existingContent.trim() === newContent.trim();
+    const normalizedIdentical = existingNormalized === newNormalized;
+    
+    if (strictlyIdentical && normalizedIdentical) {
       console.log('📄 Content identical, no update needed');
       return false;
     }
     
-    // For more sophisticated comparison, we could compare just the movie data
+    // If only normalized content is identical, we'll still consider it a change to be safe
+    if (!strictlyIdentical && normalizedIdentical) {
+      console.log('📄 Content differs only in whitespace, updating to preserve formatting');
+      return true;
+    }
+    
+    // For more sophisticated comparison, compare movie data
     // Extract movie titles from both versions to see if the content meaningfully changed
     const existingTitles = extractMovieTitles(existingContent);
     const newTitles = extractMovieTitles(newContent);
@@ -143,13 +183,50 @@ async function shouldUpdateFile(filePath, newContent) {
     
     if (titlesChanged) {
       console.log(`📄 Movie lineup changed: ${existingTitles.length} -> ${newTitles.length} movies`);
-      console.log(`   Previous: ${existingTitles.join(', ')}`);
-      console.log(`   New: ${newTitles.join(', ')}`);
       return true;
     }
     
-    // If titles are the same but content differs, it might be schedule/description updates
-    console.log('📄 Movie details updated (schedules, descriptions, etc.)');
+    // Extract additional content for comparison - schedules and descriptions
+    const extractMovieData = (htmlContent) => {
+      const movies = [];
+      try {
+        // Extract schedule information
+        const scheduleMatches = htmlContent.match(/<div class="schedule">([^<]*)<\/div>/g);
+        if (scheduleMatches) {
+          scheduleMatches.forEach(match => {
+            const scheduleMatch = match.match(/<div class="schedule">([^<]*)<\/div>/);
+            if (scheduleMatch) movies.push({ schedule: scheduleMatch[1].trim() });
+          });
+        }
+        
+        // Extract description information  
+        const descriptionMatches = htmlContent.match(/<div class="description">([^<]*)<\/div>/g);
+        if (descriptionMatches) {
+          descriptionMatches.forEach((match, index) => {
+            const descriptionMatch = match.match(/<div class="description">([^<]*)<\/div>/);
+            if (descriptionMatch && movies[index]) {
+              movies[index].description = descriptionMatch[1].trim();
+            }
+          });
+        }
+      } catch (error) {
+        console.warn(`⚠️ Error extracting movie data: ${error.message}`);
+      }
+      return movies;
+    };
+    
+    const existingMovieData = extractMovieData(existingContent);
+    const newMovieData = extractMovieData(newContent);
+    
+    const movieDataChanged = JSON.stringify(existingMovieData) !== JSON.stringify(newMovieData);
+    
+    if (movieDataChanged) {
+      console.log('📄 Movie schedules or descriptions updated');
+      return true;
+    }
+    
+    // If titles are the same but content differs, it might be other updates
+    console.log('📄 Content differs, updating file');
     return true;
     
   } catch (error) {
