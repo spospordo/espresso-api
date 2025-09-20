@@ -52,7 +52,24 @@ sudo systemctl restart espresso-api.service
 ```
 sudo journalctl -u espresso-api.service -f
 ```
-## Dependancies
+## Troubleshooting
+
+### Force Update Issues
+If you're experiencing issues with force updates not pushing to GitHub Pages, see the detailed troubleshooting guide:
+- [Force Update Troubleshooting Guide](./FORCE_UPDATE_TROUBLESHOOTING.md)
+
+Common symptoms:
+- Local files update but GitHub.io site doesn't reflect changes
+- Force update enabled but changes not being pushed
+- Silent failures in git operations
+
+### General Issues
+For other configuration and setup issues, check that:
+1. Your `config.cjs` file has all required settings
+2. File paths in configuration exist and are accessible  
+3. GitHub credentials and repository paths are correct
+
+## Dependencies
 ```
 npm install simple-git
 
