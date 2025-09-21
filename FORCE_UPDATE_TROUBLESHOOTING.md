@@ -111,6 +111,24 @@ node scrapeVidiots.cjs
 - Check the console output for the "Force update enabled" message
 - If not seeing this message, the configuration may not be loading correctly
 
+### Issue: Git sync problems and repository conflicts
+```bash
+❌ git push failed with status: 1
+stderr: ! [rejected] main -> main (fetch first)
+```
+**Solution**: The system now includes automatic force sync functionality that will:
+1. Create a backup branch
+2. Force local repository to match origin/main
+3. Discard any conflicting local changes
+4. Restart the vidiots logic
+
+**Manual force sync**: If automatic retry doesn't work, run:
+```bash
+node uploadToGitHub.mjs --force-sync
+```
+
+**See**: `FORCE_SYNC_DOCUMENTATION.md` for complete details on the force sync feature.
+
 ### Issue: Changes not appearing on GitHub.io after push
 - GitHub Pages can take 5-10 minutes to update after a successful push
 - Check the GitHub repository to confirm the files were actually updated

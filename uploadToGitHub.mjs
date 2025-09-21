@@ -182,7 +182,7 @@ function pullFromRemote() {
 }
 
 // Function to force sync with origin/main (aggressive approach that discards local changes)
-function forceSync() {
+async function forceSync() {
   console.log('🚨 Starting force sync - this will discard any local changes and commits...');
   
   // Step 1: Create backup branch with timestamp
@@ -353,6 +353,26 @@ function forceSync() {
   }
   
   console.log('🎉 Force sync completed successfully!');
+  
+  // Trigger server.js and vidiots logic restart as requested
+  console.log('🔄 Triggering server.js and vidiots logic restart...');
+  try {
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
+    
+    // Re-run the vidiots scraper to regenerate content with the synced repository
+    console.log('🌐 Re-running vidiots scraper after sync...');
+    await execAsync('SKIP_UPLOAD=true node scrapeVidiots.cjs', { 
+      cwd: process.cwd(),
+      env: { ...process.env, SKIP_UPLOAD: 'true' }
+    });
+    
+    console.log('✅ Vidiots logic restarted successfully');
+  } catch (error) {
+    console.warn('⚠️  Warning: Could not restart vidiots logic:', error.message);
+  }
+  
   return true;
 }
 
@@ -493,7 +513,7 @@ async function pushToGitHub(commitMessage = 'Automated commit and push', isRetry
         // Regular pull failed, try force sync as a last resort
         console.log('🚨 Regular pull failed, attempting force sync to resolve repository issues...');
         
-        if (forceSync()) {
+        if (await forceSync()) {
           console.log('🔄 Force sync successful, regenerating content and retrying push...');
           
           // Trigger content regeneration after force sync
@@ -606,7 +626,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     validateGitSetup();
   } else if (process.argv[2] === '--force-sync') {
     console.log('🚨 Force sync requested via command line...');
-    forceSync();
+    (async () => {
+      await forceSync();
+    })();
   } else {
     (async () => {
       await pushToGitHub(process.argv[2] || 'Automated commit and push');
