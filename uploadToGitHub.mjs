@@ -159,6 +159,17 @@ function pullFromRemote() {
   if (pullResult.status !== 0) {
     console.error('❌ git pull failed with status:', pullResult.status);
     console.error('stderr:', pullResult.stderr);
+    
+    // Check if this is a recoverable pull error
+    const stderr = pullResult.stderr || '';
+    const isRecoverablePullError = !stderr.includes('does not appear to be a git repository') && 
+                                   !stderr.includes('Authentication failed') &&
+                                   !stderr.includes('access rights');
+    
+    if (!isRecoverablePullError) {
+      console.error('❌ Git pull failed with non-recoverable error, cannot retry');
+    }
+    
     return false;
   }
   
