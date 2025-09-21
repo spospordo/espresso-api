@@ -181,6 +181,201 @@ function pullFromRemote() {
   return true;
 }
 
+// Function to force sync with origin/main (aggressive approach that discards local changes)
+async function forceSync() {
+  console.log('🚨 Starting force sync - this will discard any local changes and commits...');
+  
+  // Step 1: Create backup branch with timestamp
+  const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').substring(0, 15);
+  const backupBranch = `backup/local-${timestamp}`;
+  
+  console.log(`💾 Creating backup branch: ${backupBranch}`);
+  const backupResult = spawnSync('git', ['branch', backupBranch], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  
+  if (backupResult.error) {
+    console.warn('⚠️  Warning: Could not create backup branch:', backupResult.error);
+  } else if (backupResult.status !== 0) {
+    console.warn('⚠️  Warning: Backup branch creation failed:', backupResult.stderr);
+  } else {
+    console.log('✅ Backup branch created successfully');
+  }
+  
+  // Step 2: Abort any in-progress operations (no error if none)
+  console.log('🛑 Aborting any in-progress git operations...');
+  
+  // Abort merge
+  const mergeAbort = spawnSync('git', ['merge', '--abort'], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  if (mergeAbort.status === 0) {
+    console.log('✅ Aborted in-progress merge');
+  }
+  
+  // Abort rebase
+  const rebaseAbort = spawnSync('git', ['rebase', '--abort'], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  if (rebaseAbort.status === 0) {
+    console.log('✅ Aborted in-progress rebase');
+  }
+  
+  // Step 3: Fetch from origin with prune
+  console.log('📥 Fetching from origin with prune...');
+  const fetchResult = spawnSync('git', ['fetch', '--prune', 'origin'], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  
+  if (fetchResult.error) {
+    console.error('❌ Error running git fetch:', fetchResult.error);
+    return false;
+  }
+  
+  if (fetchResult.status !== 0) {
+    console.error('❌ git fetch failed with status:', fetchResult.status);
+    console.error('stderr:', fetchResult.stderr);
+    return false;
+  }
+  
+  console.log('✅ Fetch completed successfully');
+  
+  // Step 4: Force local main to exactly match origin/main
+  console.log('🔄 Forcing local main to match origin/main...');
+  
+  // Checkout main branch (create if doesn't exist)
+  const checkoutResult = spawnSync('git', ['checkout', '-B', 'main', 'origin/main'], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  
+  if (checkoutResult.error) {
+    console.error('❌ Error during checkout:', checkoutResult.error);
+    return false;
+  }
+  
+  if (checkoutResult.status !== 0) {
+    console.error('❌ git checkout failed with status:', checkoutResult.status);
+    console.error('stderr:', checkoutResult.stderr);
+    return false;
+  }
+  
+  console.log('✅ Checked out main branch from origin/main');
+  
+  // Step 5: Hard reset to origin/main
+  console.log('🔄 Hard reset to origin/main...');
+  const resetResult = spawnSync('git', ['reset', '--hard', 'origin/main'], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  
+  if (resetResult.error) {
+    console.error('❌ Error during reset:', resetResult.error);
+    return false;
+  }
+  
+  if (resetResult.status !== 0) {
+    console.error('❌ git reset failed with status:', resetResult.status);
+    console.error('stderr:', resetResult.stderr);
+    return false;
+  }
+  
+  console.log('✅ Hard reset completed');
+  
+  // Step 6: Clean untracked files and directories
+  console.log('🧹 Cleaning untracked files and directories...');
+  const cleanResult = spawnSync('git', ['clean', '-fd'], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  
+  if (cleanResult.error) {
+    console.warn('⚠️  Warning: Could not clean untracked files:', cleanResult.error);
+  } else if (cleanResult.status !== 0) {
+    console.warn('⚠️  Warning: git clean failed:', cleanResult.stderr);
+  } else {
+    console.log('✅ Cleaned untracked files');
+    if (cleanResult.stdout && cleanResult.stdout.trim()) {
+      console.log('📊 Removed files:', cleanResult.stdout.trim());
+    }
+  }
+  
+  // Step 7: Verify sync
+  console.log('🔍 Verifying repository is in sync...');
+  
+  // Check rev-list count
+  const revListResult = spawnSync('git', ['rev-list', '--left-right', '--count', 'HEAD...origin/main'], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  
+  if (revListResult.status === 0) {
+    const counts = revListResult.stdout.trim();
+    console.log(`📊 Sync status: ${counts} (should be "0\t0")`);
+    
+    if (counts === '0\t0') {
+      console.log('✅ Repository is perfectly in sync with origin/main');
+    } else {
+      console.warn('⚠️  Warning: Repository may not be perfectly in sync');
+    }
+  }
+  
+  // Check git status
+  const statusResult = spawnSync('git', ['status', '-b'], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  
+  if (statusResult.status === 0) {
+    console.log('📊 Final status:');
+    console.log(statusResult.stdout);
+  }
+  
+  // Final verification: test if pull is now a no-op
+  console.log('🔍 Testing if pull is now a no-op...');
+  const testPullResult = spawnSync('git', ['pull', '--ff-only', 'origin', 'main'], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  
+  if (testPullResult.status === 0) {
+    console.log('✅ Pull test successful - repository is properly synced');
+    if (testPullResult.stdout && testPullResult.stdout.includes('Already up to date')) {
+      console.log('✅ Confirmed: Already up to date');
+    }
+  } else {
+    console.warn('⚠️  Warning: Pull test failed, manual intervention may be needed');
+    console.warn('stderr:', testPullResult.stderr);
+  }
+  
+  console.log('🎉 Force sync completed successfully!');
+  
+  // Trigger server.js and vidiots logic restart as requested
+  console.log('🔄 Triggering server.js and vidiots logic restart...');
+  try {
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
+    
+    // Re-run the vidiots scraper to regenerate content with the synced repository
+    console.log('🌐 Re-running vidiots scraper after sync...');
+    await execAsync('SKIP_UPLOAD=true node scrapeVidiots.cjs', { 
+      cwd: process.cwd(),
+      env: { ...process.env, SKIP_UPLOAD: 'true' }
+    });
+    
+    console.log('✅ Vidiots logic restarted successfully');
+  } catch (error) {
+    console.warn('⚠️  Warning: Could not restart vidiots logic:', error.message);
+  }
+  
+  return true;
+}
+
 // Function to trigger content regeneration
 async function triggerContentRegeneration() {
   console.log('🔄 Triggering content regeneration...');
@@ -296,7 +491,7 @@ async function pushToGitHub(commitMessage = 'Automated commit and push', isRetry
       retryAttempts++;
       console.log(`🔄 Detected remote changes, attempting recovery (attempt ${retryAttempts}/${MAX_RETRY_ATTEMPTS})...`);
       
-      // Try to pull changes from remote
+      // Try to pull changes from remote first
       if (pullFromRemote()) {
         console.log('🔄 Pull successful, regenerating content and retrying push...');
         
@@ -315,9 +510,31 @@ async function pushToGitHub(commitMessage = 'Automated commit and push', isRetry
           return;
         }
       } else {
-        console.error('❌ Failed to pull remote changes, cannot retry push');
-        retryAttempts = 0; // Reset for next time
-        return;
+        // Regular pull failed, try force sync as a last resort
+        console.log('🚨 Regular pull failed, attempting force sync to resolve repository issues...');
+        
+        if (await forceSync()) {
+          console.log('🔄 Force sync successful, regenerating content and retrying push...');
+          
+          // Trigger content regeneration after force sync
+          const regenSuccess = await triggerContentRegeneration();
+          if (regenSuccess) {
+            // Wait a moment for content to be generated
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Retry the push operation
+            console.log(`🔄 Retrying push after force sync and content regeneration...`);
+            return await pushToGitHub(commitMessage, true);
+          } else {
+            console.error('❌ Content regeneration failed after force sync, cannot retry push');
+            retryAttempts = 0; // Reset for next time
+            return;
+          }
+        } else {
+          console.error('❌ Force sync failed, cannot retry push');
+          retryAttempts = 0; // Reset for next time
+          return;
+        }
       }
     } else if (retryAttempts >= MAX_RETRY_ATTEMPTS) {
       console.error(`❌ Maximum retry attempts (${MAX_RETRY_ATTEMPTS}) reached, giving up`);
@@ -400,10 +617,18 @@ export function validateGitSetup() {
   return true;
 }
 
+// Export force sync function for external use
+export { forceSync };
+
 // If run directly, perform a push
 if (import.meta.url === `file://${process.argv[1]}`) {
   if (process.argv[2] === '--validate') {
     validateGitSetup();
+  } else if (process.argv[2] === '--force-sync') {
+    console.log('🚨 Force sync requested via command line...');
+    (async () => {
+      await forceSync();
+    })();
   } else {
     (async () => {
       await pushToGitHub(process.argv[2] || 'Automated commit and push');

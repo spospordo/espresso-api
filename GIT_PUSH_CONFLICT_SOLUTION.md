@@ -62,18 +62,29 @@ The solution implements an intelligent retry mechanism that:
    - Handles git pull operations
    - Validates success and provides error handling
 
-2. **Enhanced `pushToGitHub()` function**
+2. **Added `forceSync()` function** *(NEW)*
+   - Implements aggressive repository sync resolution
+   - Creates backup branches before destructive operations
+   - Forces local repository to exactly match origin/main
+   - Automatically restarts vidiots logic after sync
+
+3. **Enhanced `pushToGitHub()` function**
    - Made async to support retry workflow
    - Added error type detection for "fetch first" errors
    - Implemented retry logic with content regeneration
    - Added retry attempt tracking
+   - **NEW**: Falls back to `forceSync()` when `pullFromRemote()` fails
 
-3. **Added `triggerContentRegeneration()` function**
+4. **Added `triggerContentRegeneration()` function**
    - Uses subprocess execution with `SKIP_UPLOAD=true`
    - Prevents circular upload calls during retry
 
-4. **Updated `schedulePush()` function**
+5. **Updated `schedulePush()` function**
    - Made async to support the new async `pushToGitHub`
+
+6. **Added command line support** *(NEW)*
+   - `--validate` flag for repository validation
+   - `--force-sync` flag for manual force sync operations
 
 ### `scrapeVidiots.cjs`
 
@@ -93,16 +104,27 @@ The solution implements an intelligent retry mechanism that:
 3. `pushToGitHub()` commits and pushes changes
 4. Success - process complete
 
-### Conflict Resolution Flow
+### Conflict Resolution Flow (Enhanced)
 1. Content changes detected
 2. `schedulePush()` called with debounce  
 3. `pushToGitHub()` commits changes
 4. Push fails with "fetch first" error
 5. **NEW**: Error type detected as recoverable
 6. **NEW**: `pullFromRemote()` executed
-7. **NEW**: `triggerContentRegeneration()` re-runs content generation
-8. **NEW**: Push retried with updated content
-9. Success or max retries reached
+7. **IF PULL FAILS**: `forceSync()` executed (aggressive resolution)
+8. **NEW**: `triggerContentRegeneration()` re-runs content generation
+9. **NEW**: Push retried with updated content
+10. Success or max retries reached
+
+### Force Sync Process (New)
+When `pullFromRemote()` fails, the system now automatically triggers `forceSync()` which:
+1. Creates backup branch with timestamp
+2. Aborts any in-progress git operations  
+3. Fetches from origin with prune
+4. Forces local main to exactly match origin/main (discards local changes)
+5. Cleans untracked files
+6. Verifies repository sync
+7. Restarts vidiots logic
 
 ## Error Types Handled
 
