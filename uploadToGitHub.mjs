@@ -181,6 +181,55 @@ function pullFromRemote() {
   return true;
 }
 
+// Function to clean up old backup branches, keeping only the last 2
+function cleanupOldBackups() {
+  console.log('🧹 Cleaning up old backup branches...');
+  
+  // Get list of all backup branches
+  const branchListResult = spawnSync('git', ['branch', '--list', 'backup/local-*'], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  
+  if (branchListResult.error || branchListResult.status !== 0) {
+    console.warn('⚠️  Warning: Could not list backup branches:', branchListResult.error || branchListResult.stderr);
+    return;
+  }
+  
+  const branchLines = branchListResult.stdout.trim().split('\n').filter(line => line.trim());
+  const backupBranches = branchLines
+    .map(line => line.trim().replace(/^\*?\s*/, '')) // Remove asterisk and whitespace
+    .filter(branch => branch.startsWith('backup/local-'))
+    .sort(); // Sort alphabetically, which works for timestamp format YYYYMMDD-HHMMSS
+  
+  console.log(`📊 Found ${backupBranches.length} backup branches`);
+  
+  if (backupBranches.length <= 2) {
+    console.log('✅ No cleanup needed - 2 or fewer backup branches exist');
+    return;
+  }
+  
+  // Keep only the last 2 (most recent) branches, delete the rest
+  const branchesToDelete = backupBranches.slice(0, -2); // All except the last 2
+  console.log(`🗑️  Deleting ${branchesToDelete.length} old backup branches:`);
+  
+  for (const branch of branchesToDelete) {
+    console.log(`   Deleting: ${branch}`);
+    const deleteResult = spawnSync('git', ['branch', '-D', branch], {
+      cwd: repoPath,
+      encoding: 'utf8'
+    });
+    
+    if (deleteResult.error || deleteResult.status !== 0) {
+      console.warn(`⚠️  Warning: Could not delete backup branch ${branch}:`, deleteResult.error || deleteResult.stderr);
+    } else {
+      console.log(`✅ Deleted backup branch: ${branch}`);
+    }
+  }
+  
+  console.log(`✅ Backup cleanup completed - kept ${backupBranches.length - branchesToDelete.length} most recent backups`);
+}
+
 // Function to force sync with origin/main (aggressive approach that discards local changes)
 async function forceSync() {
   console.log('🚨 Starting force sync - this will discard any local changes and commits...');
@@ -201,6 +250,9 @@ async function forceSync() {
     console.warn('⚠️  Warning: Backup branch creation failed:', backupResult.stderr);
   } else {
     console.log('✅ Backup branch created successfully');
+    
+    // Clean up old backups after successful backup creation
+    cleanupOldBackups();
   }
   
   // Step 2: Abort any in-progress operations (no error if none)
@@ -617,8 +669,8 @@ export function validateGitSetup() {
   return true;
 }
 
-// Export force sync function for external use
-export { forceSync };
+// Export force sync and cleanup functions for external use
+export { forceSync, cleanupOldBackups };
 
 // If run directly, perform a push
 if (import.meta.url === `file://${process.argv[1]}`) {
