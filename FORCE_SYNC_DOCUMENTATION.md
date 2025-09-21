@@ -23,14 +23,15 @@ This new feature automatically resolves these issues using the exact sequence of
 The force sync implements the following sequence:
 
 1. **Create Backup Branch** - Creates a timestamped backup branch (`backup/local-YYYYMMDD-HHMMSS`)
-2. **Abort Operations** - Aborts any in-progress git merge or rebase operations
-3. **Fetch with Prune** - Runs `git fetch --prune origin` to update remote tracking
-4. **Force Checkout** - Runs `git checkout -B main origin/main` to force local main to match origin/main
-5. **Hard Reset** - Runs `git reset --hard origin/main` to discard any local changes
-6. **Clean Untracked** - Runs `git clean -fd` to remove untracked files and directories
-7. **Verify Sync** - Verifies the repository is in sync using `git rev-list --left-right --count HEAD...origin/main`
-8. **Test Pull** - Tests that `git pull --ff-only origin main` is now a no-op
-9. **Restart Logic** - Automatically restarts the vidiots scraper logic after sync
+2. **Cleanup Old Backups** - Automatically removes old backup branches, keeping only the last 2 backups to prevent storage bloat
+3. **Abort Operations** - Aborts any in-progress git merge or rebase operations
+4. **Fetch with Prune** - Runs `git fetch --prune origin` to update remote tracking
+5. **Force Checkout** - Runs `git checkout -B main origin/main` to force local main to match origin/main
+6. **Hard Reset** - Runs `git reset --hard origin/main` to discard any local changes
+7. **Clean Untracked** - Runs `git clean -fd` to remove untracked files and directories
+8. **Verify Sync** - Verifies the repository is in sync using `git rev-list --left-right --count HEAD...origin/main`
+9. **Test Pull** - Tests that `git pull --ff-only origin main` is now a no-op
+10. **Restart Logic** - Automatically restarts the vidiots scraper logic after sync
 
 ## Integration with Existing Retry Logic
 
@@ -74,10 +75,25 @@ if (isValid) {
 ## Safety Features
 
 1. **Backup Creation** - Always creates a backup branch before making destructive changes
-2. **Maximum Retries** - Limited to 2 retry attempts to prevent infinite loops  
-3. **Error Detection** - Only triggers on specific recoverable error types
-4. **Detailed Logging** - Comprehensive logging for monitoring and troubleshooting
-5. **Verification** - Multiple verification steps to ensure sync was successful
+2. **Automatic Backup Cleanup** - Keeps only the last 2 backup branches to prevent local storage bloat
+3. **Maximum Retries** - Limited to 2 retry attempts to prevent infinite loops  
+4. **Error Detection** - Only triggers on specific recoverable error types
+5. **Detailed Logging** - Comprehensive logging for monitoring and troubleshooting
+6. **Verification** - Multiple verification steps to ensure sync was successful
+
+## Backup Management
+
+The system automatically manages backup branches to prevent local storage from being consumed by old backups:
+
+- **Backup Format**: `backup/local-YYYYMMDD-HHMMSS` (e.g., `backup/local-20241221-143022`)
+- **Retention Policy**: Only the 2 most recent backup branches are kept
+- **Automatic Cleanup**: Old backups are deleted immediately after each successful backup creation
+- **Manual Access**: You can manually run the cleanup function if needed:
+
+```javascript
+import { cleanupOldBackups } from './uploadToGitHub.mjs';
+cleanupOldBackups(); // Manually clean up old backup branches
+```
 
 ## Expected Log Output
 
@@ -86,6 +102,14 @@ if (isValid) {
 🚨 Starting force sync - this will discard any local changes and commits...
 💾 Creating backup branch: backup/local-20241221-143022
 ✅ Backup branch created successfully
+🧹 Cleaning up old backup branches...
+📊 Found 4 backup branches
+🗑️  Deleting 2 old backup branches:
+   Deleting: backup/local-20241220-120000
+✅ Deleted backup branch: backup/local-20241220-120000
+   Deleting: backup/local-20241220-130000
+✅ Deleted backup branch: backup/local-20241220-130000
+✅ Backup cleanup completed - kept 2 most recent backups
 🛑 Aborting any in-progress git operations...
 📥 Fetching from origin with prune...
 ✅ Fetch completed successfully
