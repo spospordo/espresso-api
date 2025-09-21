@@ -531,11 +531,14 @@ async function scrapeComingSoon() {
 }
 
 // call git upload only if content was actually updated
-async function runScrapeAndUpload() {
+async function runScrapeAndUpload(skipUpload = false) {
   try {
     const wasUpdated = await scrapeComingSoon();
     
-    if (wasUpdated) {
+    // Check environment variable to skip upload (used during retry scenarios)
+    const shouldSkipUpload = skipUpload || process.env.SKIP_UPLOAD === 'true';
+    
+    if (wasUpdated && !shouldSkipUpload) {
       console.log('📤 Content was updated, triggering git upload...');
       try {
         const { schedulePush } = await import('./uploadToGitHub.mjs');
@@ -544,14 +547,25 @@ async function runScrapeAndUpload() {
         console.error('❌ Error importing or scheduling git upload:', err.message);
         console.error('❌ Stack trace:', err.stack);
       }
+    } else if (wasUpdated && shouldSkipUpload) {
+      console.log('📤 Content was updated, but skipping git upload as requested');
     } else {
       console.log('📤 No content changes, skipping git upload');
     }
+    
+    return wasUpdated;
   } catch (error) {
     console.error('❌ Error in runScrapeAndUpload:', error.message);
     console.error('❌ Stack trace:', error.stack);
+    return false;
   }
 }
+
+// Export the main functions for use by other modules
+module.exports = {
+  scrapeComingSoon,
+  runScrapeAndUpload
+};
 
 // Schedule scraping
 cron.schedule('0 6,12 * * *', () => {

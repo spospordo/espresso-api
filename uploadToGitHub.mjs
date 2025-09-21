@@ -142,8 +142,67 @@ function hasChanges() {
   return false;
 }
 
-// Function to push changes to GitHub
-function pushToGitHub(commitMessage = 'Automated commit and push') {
+// Function to pull changes from remote repository
+function pullFromRemote() {
+  console.log('🔄 Pulling changes from remote repository...');
+  
+  const pullResult = spawnSync('git', ['pull'], {
+    cwd: repoPath,
+    encoding: 'utf8'
+  });
+  
+  if (pullResult.error) {
+    console.error('❌ Error running git pull:', pullResult.error);
+    return false;
+  }
+  
+  if (pullResult.status !== 0) {
+    console.error('❌ git pull failed with status:', pullResult.status);
+    console.error('stderr:', pullResult.stderr);
+    return false;
+  }
+  
+  console.log('✅ Successfully pulled changes from remote');
+  if (pullResult.stdout && pullResult.stdout.trim()) {
+    console.log('📊 Pull output:', pullResult.stdout.trim());
+  }
+  
+  return true;
+}
+
+// Function to trigger content regeneration
+async function triggerContentRegeneration() {
+  console.log('🔄 Triggering content regeneration...');
+  
+  try {
+    // Set an environment variable to prevent the scraper from triggering uploads
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
+    
+    // Re-run the scraper to regenerate content with the updated local repository
+    // Set SKIP_UPLOAD environment variable to prevent circular upload calls
+    console.log('🌐 Re-running scraper to regenerate content...');
+    await execAsync('SKIP_UPLOAD=true node scrapeVidiots.cjs', { 
+      cwd: process.cwd(),
+      env: { ...process.env, SKIP_UPLOAD: 'true' }
+    });
+    
+    console.log('✅ Content regeneration completed');
+    return true;
+  } catch (error) {
+    console.error('❌ Error during content regeneration:', error.message);
+    console.error('❌ Stack trace:', error.stack);
+    return false;
+  }
+}
+
+// Track retry attempts to prevent infinite loops
+let retryAttempts = 0;
+const MAX_RETRY_ATTEMPTS = 2;
+
+// Function to push changes to GitHub with retry logic
+async function pushToGitHub(commitMessage = 'Automated commit and push', isRetry = false) {
   console.log(`🚀 Starting git upload process with message: "${commitMessage}"`);
   console.log(`📁 Repository path: ${repoPath}`);
   
@@ -208,15 +267,59 @@ function pushToGitHub(commitMessage = 'Automated commit and push') {
     cwd: repoPath,
     encoding: 'utf8'
   });
+  
   if (pushResult.error) {
     console.error('❌ Error running git push:', pushResult.error);
     return;
   }
+  
   if (pushResult.status !== 0) {
     console.error('❌ git push failed with status:', pushResult.status);
     console.error('stderr:', pushResult.stderr);
-    return;
+    
+    // Check if this is a "fetch first" error (remote has newer commits)
+    const stderr = pushResult.stderr || '';
+    const isFetchFirstError = stderr.includes('fetch first') || stderr.includes('Updates were rejected');
+    
+    if (isFetchFirstError && retryAttempts < MAX_RETRY_ATTEMPTS) {
+      retryAttempts++;
+      console.log(`🔄 Detected remote changes, attempting recovery (attempt ${retryAttempts}/${MAX_RETRY_ATTEMPTS})...`);
+      
+      // Try to pull changes from remote
+      if (pullFromRemote()) {
+        console.log('🔄 Pull successful, regenerating content and retrying push...');
+        
+        // Trigger content regeneration to incorporate any remote changes
+        const regenSuccess = await triggerContentRegeneration();
+        if (regenSuccess) {
+          // Wait a moment for content to be generated
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Retry the push operation
+          console.log(`🔄 Retrying push after content regeneration...`);
+          return await pushToGitHub(commitMessage, true);
+        } else {
+          console.error('❌ Content regeneration failed, cannot retry push');
+          retryAttempts = 0; // Reset for next time
+          return;
+        }
+      } else {
+        console.error('❌ Failed to pull remote changes, cannot retry push');
+        retryAttempts = 0; // Reset for next time
+        return;
+      }
+    } else if (retryAttempts >= MAX_RETRY_ATTEMPTS) {
+      console.error(`❌ Maximum retry attempts (${MAX_RETRY_ATTEMPTS}) reached, giving up`);
+      retryAttempts = 0; // Reset for next time
+      return;
+    } else {
+      console.error('❌ Push failed for non-recoverable reason');
+      return;
+    }
   }
+  
+  // Reset retry counter on successful push
+  retryAttempts = 0;
   
   // Git push can have output in stderr that's not an error (like progress info)
   if (pushResult.stdout && pushResult.stdout.trim()) {
@@ -240,9 +343,9 @@ export function schedulePush(commitMessage = 'Automated commit and push') {
     console.log('⏰ Clearing previous scheduled push');
     clearTimeout(pushTimeout);
   }
-  pushTimeout = setTimeout(() => {
+  pushTimeout = setTimeout(async () => {
     console.log('⏰ Debounce period expired, executing push now...');
-    pushToGitHub(commitMessage);
+    await pushToGitHub(commitMessage);
     pushTimeout = null;
   }, 5000); // 5 seconds debounce
   console.log('⏰ Push scheduled for 5 seconds from now');
@@ -291,6 +394,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (process.argv[2] === '--validate') {
     validateGitSetup();
   } else {
-    pushToGitHub(process.argv[2] || 'Automated commit and push');
+    (async () => {
+      await pushToGitHub(process.argv[2] || 'Automated commit and push');
+    })();
   }
 }
