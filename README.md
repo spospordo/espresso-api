@@ -1,3 +1,7 @@
+# Archive Note
+
+This was a great little project I ran directly on linux. However, the project grew in scope and did many things and I move most functionality to another project which was containerized and much more robust. 
+
 # espresso-api README
 I use this project to track espresso recipe for 3 different beans and display on my TRMNL eInk display. 
 
